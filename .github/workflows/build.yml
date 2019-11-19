@@ -6,7 +6,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-
     steps:
     - uses: actions/checkout@v1
       
@@ -64,12 +63,18 @@ jobs:
         CHROMIUM_BIN: /usr/bin/google-chrome
         SHA7: ${GITHUB_SHA:7}
 
-    - name: Build docker image
+    - name: Build WAR
       if: contains(github.event.pull_request.labels.*.name, 'build_image')
       env:
         SHA7: ${GITHUB_SHA:7}
       run: |
         sh ./build.sh -DplatformVersion=3.3-${SHA7} -Dbuildjson=researchspace/researchspace-root-build.json -DbuildEnv=prod package
+
+    - name: Build docker image
+      if: contains(github.event.pull_request.labels.*.name, 'build_image')
+      env:
+        SHA7: ${GITHUB_SHA:7}
+      run: |
         export DOCKER_FOLDER="$(pwd)/metaphacts-platform/dist/docker"
         cp target/platform-*.war $DOCKER_FOLDER/platform/ROOT.war
         mkdir $DOCKER_FOLDER/platform/etc
