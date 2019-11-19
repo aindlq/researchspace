@@ -20,8 +20,35 @@ jobs:
       with:
         node-version: 12.x
 
+    - name: Cache sbt packages
+      uses: actions/cache@v1
+      with:
+        path: ~/.sbt
+        key: sbt-v1-${{ hashFiles('project/build.properties') }}
+        restore-keys: |
+          sbt-v1-${{ env.cache-name }}
+          sbt-v1-
+
+    - name: Cache maven packages
+      uses: actions/cache@v1
+      with:
+        path: ~/.coursier
+        key: ivy-v1-${{ hashFiles('**/(build.sbt|dependencies.scala)') }}
+        restore-keys: |
+          ivy-v1-${{ env.cache-name }}
+          ivy-v1-
+          
+    - name: Cache node packages
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache/yarn
+        key: yarn-v1-${{ hashFiles('**/yarn.lock') }}
+        restore-keys: |
+          yarn-v1-${{ env.cache-name }}
+          yarn-v1-
+
     - name: test
       run: |
-        sh ./build.sh -DplatformVersion=3.2.2-SNAPSHOT -Dbuildjson=researchspace/researchspace-root-build.json -DbuildEnv=prod -DnoYarn=true test
+        sh ./build.sh -DplatformVersion=3.2.2-SNAPSHOT -Dbuildjson=researchspace/researchspace-root-build.json -DbuildEnv=prod test
       env:
         CI: true
