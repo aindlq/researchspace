@@ -33,7 +33,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.coursier
-        key: ivy-v1-${{ hashFiles('**/(build.sbt|dependencies.scala)') }}
+        key: ivy-v1-${{ hashFiles('project/dependencies.scala') }}
         restore-keys: |
           ivy-v1-${{ env.cache-name }}
           ivy-v1-
