@@ -57,11 +57,10 @@ jobs:
 
     - name: test
       run: |
-        sh ./build.sh -DplatformVersion=3.3-${SHA7} -Dbuildjson=researchspace/researchspace-root-build.json -DbuildEnv=prod test
+        sh ./build.sh -DplatformVersion=3.3-${GITHUB_SHA:7} -Dbuildjson=researchspace/researchspace-root-build.json -DbuildEnv=prod test
       env:
         CI: true
         CHROMIUM_BIN: /usr/bin/google-chrome
-        SHA7: ${GITHUB_SHA:7}
 
     - name: Build WAR
       if: contains(github.event.pull_request.labels.*.name, 'build_image')
@@ -70,8 +69,6 @@ jobs:
 
     - name: Build docker image
       if: contains(github.event.pull_request.labels.*.name, 'build_image')
-      env:
-        SHA7: ${GITHUB_SHA:7}
       run: |
         export DOCKER_FOLDER="$(pwd)/metaphacts-platform/dist/docker"
         cp target/platform-*.war $DOCKER_FOLDER/platform/ROOT.war
@@ -81,3 +78,12 @@ jobs:
         cp -r  metaphacts-platform/app/config/* $DOCKER_FOLDER/platform/config
         cd $DOCKER_FOLDER/platform
         docker build -t researchspace/platform-ci:${GITHUB_SHA:7} .
+        
+    - name: Push docker image
+      if: contains(github.event.pull_request.labels.*.name, 'build_image')
+      env:
+        DOCKER_HUB_USER: ${{ secrets.DOCKER_HUB_USER }}
+        DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_PASSWORD }}
+      run: |
+        echo "$DOCKER_HUB_PASSWORD" | docker login --username ${DOCKER_HUB_USER} --password-stdin
+        docker push researchspace/platform-ci:${GITHUB_SHA:7}
