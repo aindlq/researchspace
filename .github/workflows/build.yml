@@ -52,3 +52,4 @@ jobs:
         sh ./build.sh -DplatformVersion=3.2.2-SNAPSHOT -Dbuildjson=researchspace/researchspace-root-build.json -DbuildEnv=prod test
       env:
         CI: true
+        CHROMIUM_BIN: /usr/bin/google-chrome
