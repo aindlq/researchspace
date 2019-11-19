@@ -36,17 +36,17 @@ jobs:
         path: ~/.coursier
         key: coursier-v1-${{ hashFiles('project/dependencies.scala') }}
         restore-keys: |
-          coursier-v1-${{ env.cache-name }}
-          coursier-v1-
+          coursier-v2-${{ env.cache-name }}
+          coursier-v2-
           
     - name: Cache maven packages 2
       uses: actions/cache@v1
       with:
         path: ~/.ivy2
-        key: ivy-v1-${{ hashFiles('project/dependencies.scala') }}
+        key: ivy-v2-${{ hashFiles('project/dependencies.scala') }}
         restore-keys: |
-          ivy-v1-${{ env.cache-name }}
-          ivy-v1-
+          ivy-v2-${{ env.cache-name }}
+          ivy-v2-
           
     - name: Cache node packages
       uses: actions/cache@v1
