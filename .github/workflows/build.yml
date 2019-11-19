@@ -30,10 +30,19 @@ jobs:
           sbt-v1-${{ env.cache-name }}
           sbt-v1-
 
-    - name: Cache maven packages
+    - name: Cache maven packages 1
       uses: actions/cache@v1
       with:
         path: ~/.coursier
+        key: coursier-v1-${{ hashFiles('project/dependencies.scala') }}
+        restore-keys: |
+          coursier-v1-${{ env.cache-name }}
+          coursier-v1-
+          
+    - name: Cache maven packages 2
+      uses: actions/cache@v1
+      with:
+        path: ~/.ivy2
         key: ivy-v1-${{ hashFiles('project/dependencies.scala') }}
         restore-keys: |
           ivy-v1-${{ env.cache-name }}
