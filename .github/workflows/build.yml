@@ -58,7 +58,23 @@ jobs:
 
     - name: test
       run: |
-        sh ./build.sh -DplatformVersion=3.2.2-SNAPSHOT -Dbuildjson=researchspace/researchspace-root-build.json -DbuildEnv=prod test
+        sh ./build.sh -DplatformVersion=3.3-${SHA7} -Dbuildjson=researchspace/researchspace-root-build.json -DbuildEnv=prod test
       env:
         CI: true
         CHROMIUM_BIN: /usr/bin/google-chrome
+        SHA7: ${GITHUB_SHA:7}
+
+    - name: Build docker image
+      if: github.event_name == 'pull_request' && contains(github.event.labels.*.name, 'build_image')
+      env:
+        SHA7: ${GITHUB_SHA:7}
+      run: |
+        sh ./build.sh -DplatformVersion=3.3-${SHA7} -Dbuildjson=researchspace/researchspace-root-build.json -DbuildEnv=prod package
+        export DOCKER_FOLDER="$(pwd)/metaphacts-platform/dist/docker"
+        cp target/platform-*.war $DOCKER_FOLDER/platform/ROOT.war
+        mkdir $DOCKER_FOLDER/platform/etc
+        cp metaphacts-platform/webapp/etc/* $DOCKER_FOLDER/platform/etc
+        mkdir $DOCKER_FOLDER/platform/config
+        cp -r  metaphacts-platform/app/config/* $DOCKER_FOLDER/platform/config
+        cd $DOCKER_FOLDER/platform
+        docker build -t researchspace/platform-ci:${SHA7} .
