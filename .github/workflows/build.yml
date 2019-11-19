@@ -55,25 +55,19 @@ jobs:
           yarn-v1-${{ env.cache-name }}
           yarn-v1-
 
-    - name: test
-      run: |
-        sh ./build.sh -DplatformVersion=3.3-${SHA7} -Dbuildjson=researchspace/researchspace-root-build.json -DbuildEnv=prod test
+    - name: Dump GitHub context
       env:
-        CI: true
-        CHROMIUM_BIN: /usr/bin/google-chrome
-        SHA7: ${GITHUB_SHA:7}
+        GITHUB_CONTEXT: ${{ toJson(github.event) }}
+        GITHUB_LIST: ${{ toJson(github.event.labels.*.name) }}
+        GITHUB_CONTAINS: ${{ contains(github.event.labels.*.name) }}
+      run: |
+        echo "$GITHUB_CONTEXT"
+        echo "$GITHUB_LIST"
+        echo "$GITHUB_CONTAINS"
 
     - name: Build docker image
       if: github.event_name == 'pull_request' && contains(github.event.labels.*.name, 'build_image')
       env:
         SHA7: ${GITHUB_SHA:7}
       run: |
-        sh ./build.sh -DplatformVersion=3.3-${SHA7} -Dbuildjson=researchspace/researchspace-root-build.json -DbuildEnv=prod package
-        export DOCKER_FOLDER="$(pwd)/metaphacts-platform/dist/docker"
-        cp target/platform-*.war $DOCKER_FOLDER/platform/ROOT.war
-        mkdir $DOCKER_FOLDER/platform/etc
-        cp metaphacts-platform/webapp/etc/* $DOCKER_FOLDER/platform/etc
-        mkdir $DOCKER_FOLDER/platform/config
-        cp -r  metaphacts-platform/app/config/* $DOCKER_FOLDER/platform/config
-        cd $DOCKER_FOLDER/platform
-        docker build -t researchspace/platform-ci:${SHA7} .
+        echo "build docker image"
