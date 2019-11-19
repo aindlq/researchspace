@@ -65,10 +65,8 @@ jobs:
 
     - name: Build WAR
       if: contains(github.event.pull_request.labels.*.name, 'build_image')
-      env:
-        SHA7: ${GITHUB_SHA:7}
       run: |
-        sh ./build.sh -DplatformVersion=3.3-${SHA7} -Dbuildjson=researchspace/researchspace-root-build.json -DbuildEnv=prod package
+        sh ./build.sh -DplatformVersion=3.3-${GITHUB_SHA:7} -Dbuildjson=researchspace/researchspace-root-build.json -DbuildEnv=prod package
 
     - name: Build docker image
       if: contains(github.event.pull_request.labels.*.name, 'build_image')
@@ -82,4 +80,4 @@ jobs:
         mkdir $DOCKER_FOLDER/platform/config
         cp -r  metaphacts-platform/app/config/* $DOCKER_FOLDER/platform/config
         cd $DOCKER_FOLDER/platform
-        docker build -t researchspace/platform-ci:${SHA7} .
+        docker build -t researchspace/platform-ci:${GITHUB_SHA:7} .
