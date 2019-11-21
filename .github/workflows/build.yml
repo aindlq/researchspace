@@ -61,6 +61,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.TOKEN }}
       
       run: |
+        mkdir ~/.sbt/
         echo "realm=github \nhost=maven.pkg.github.com \nuser=aindlq \npassword=${GITHUB_TOKEN}" >> ~/.sbt/credentials
       
     - name: test
