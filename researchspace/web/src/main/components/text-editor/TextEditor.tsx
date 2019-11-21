@@ -243,7 +243,9 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
   }
 
   renderBlock = (props: RenderNodeProps, editor: Slate.Editor, next: () => any): any => {
+    console.log('rendering block' + props.node.type)
     switch (props.node.type) {
+      case Block.title: return this.renderTextBlock('h1', props);
       case Block.empty: return this.emptyBlock(props);
       case Block.embed: return this.embedBlock(props);
       case Block.p: return this.renderTextBlock('p', props);
@@ -256,6 +258,15 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
       default:
         return next();
     }
+  }
+
+  private onKeyDown = (event: Event, editor: Slate.Editor, next: () => void) => {
+    next();
+    /* if (Hotkeys.isSplitBlock(event) && !IS_IOS) {
+     *   return hasVoidParent
+     *        ? editor.moveToStartOfNextText()
+     *        : editor.splitBlock()
+     * } */
   }
 
   componentDidMount() {
@@ -313,6 +324,7 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
                 value={this.state.value}
                 renderMark={this.renderMark}
                 renderNode={this.renderBlock}
+                onKeyDown={this.onKeyDown}
                 schema={schema}
                 onChange={this.onChange}
               />

@@ -25,6 +25,7 @@ import { Block, MARK, Mark, DEFAULT_BLOCK, TextAlignment, isTextBlock } from './
 import * as styles from './TextEditor.scss';
 
 const BLOCK_TO_ICON: { [block in Block]: string } = {
+  [Block.title]: 'fa-header',
   [Block.empty]: 'fa-plus',
   [Block.embed]: 'fa-file-code-o',
   [Block.p]: 'fa-paragraph',
@@ -37,6 +38,7 @@ const BLOCK_TO_ICON: { [block in Block]: string } = {
 };
 
 const BLOCK_TO_LABEL: { [block in Block]: string } = {
+  [Block.title]: 'TITLE',
   [Block.empty]: 'Placeholder',
   [Block.embed]: 'Resource',
   [Block.p]: 'Paragraph',
@@ -255,23 +257,34 @@ export class BlockDropdown extends React.Component<BlockDropdownProps> {
     const { sidebar, anchorBlock } = this.props;
     const block = anchorBlock ? anchorBlock.type as Block : Block.empty;
 
-    return (
-      <Dropdown id='blocks' pullRight={true}>
-        <Dropdown.Toggle>
-          {sidebar ? this.actionIcon(block) : this.actionDescription(block)}
-        </Dropdown.Toggle>
-        <Dropdown.Menu>
-          {this.actionButton(Block.p)}
-          <MenuItem divider />
-          {this.actionButton(Block.h1)}
-          {this.actionButton(Block.h2)}
-          {this.actionButton(Block.h3)}
-          <MenuItem divider />
-          {this.actionButton(Block.ol)}
-          {this.actionButton(Block.ul)}
-        </Dropdown.Menu>
-      </Dropdown>
-    );
+    if (this.hasBlock(Block.title)) {
+      return (
+        <Dropdown id='blocks' pullRight={true} disabled={true}>
+          <Dropdown.Toggle noCaret={true} bsSize={sidebar ? 'small' : 'default'}>
+            {sidebar ? this.actionIcon(block) : this.actionDescription(block)}
+          </Dropdown.Toggle>
+          <Dropdown.Menu></Dropdown.Menu>
+        </Dropdown>
+      );
+    } else {
+      return (
+        <Dropdown id='blocks' pullRight={true}>
+          <Dropdown.Toggle bsSize={sidebar ? 'small' : 'default'}>
+            {sidebar ? this.actionIcon(block) : this.actionDescription(block)}
+          </Dropdown.Toggle>
+          <Dropdown.Menu>
+            {this.actionButton(Block.p)}
+            <MenuItem divider />
+            {this.actionButton(Block.h1)}
+            {this.actionButton(Block.h2)}
+            {this.actionButton(Block.h3)}
+            <MenuItem divider />
+            {this.actionButton(Block.ol)}
+            {this.actionButton(Block.ul)}
+          </Dropdown.Menu>
+        </Dropdown>
+      );
+    }
   }
 }
 
