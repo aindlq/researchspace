@@ -24,6 +24,7 @@ version := platformVersion
 licenses += "LGPL 2.1" -> url("http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html")
 
 resolvers += Resolver.mavenLocal
+credentials += Credentials("github", "maven.pkg.github.com", "aindlq", "7d8c4493db0c38735472f6d4b76ee2396d023564")
 
 libraryDependencies ++= Seq(
   sesame, logging, apacheCommons, misc, jackson, jersey, guice, testLibs, pac4j

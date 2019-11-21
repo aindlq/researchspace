@@ -63,3 +63,5 @@ version := platformVersion
 licenseFile := licenseBundleOptions.licenseFile
 
 resolvers += Resolver.mavenLocal
+
+credentials += Credentials("github", "maven.pkg.github.com", "aindlq", "7d8c4493db0c38735472f6d4b76ee2396d023564")

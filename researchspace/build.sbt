@@ -15,3 +15,5 @@ libraryDependencies ++= Seq(
   "com.twelvemonkeys.imageio" % "imageio-tiff" % "3.2.1",
   "com.twelvemonkeys.imageio" % "imageio-core" % "3.2.1"
 )
+
+credentials += Credentials("github", "maven.pkg.github.com", "aindlq", "7d8c4493db0c38735472f6d4b76ee2396d023564")
