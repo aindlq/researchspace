@@ -56,6 +56,13 @@ jobs:
           yarn-v1-${{ env.cache-name }}
           yarn-v1-
 
+    - name: create credentials
+      env:
+        GITHUB_TOKEN: ${{ secrets.TOKEN }}
+      
+      run: |
+        echo "realm=github \nhost=maven.pkg.github.com \nuser=aindlq \npassword=${GITHUB_TOKEN}" >> ~/.sbt/credentials
+      
     - name: test
       run: |
         sh ./build.sh -DplatformVersion=3.3-${GITHUB_SHA:7} -Dbuildjson=researchspace/researchspace-root-build.json -DbuildEnv=prod test
