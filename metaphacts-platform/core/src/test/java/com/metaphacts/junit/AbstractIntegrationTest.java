@@ -44,14 +44,14 @@ import com.metaphacts.data.rdf.ReadConnection;
  * Consequently test methods access the same configuration and data files and as
  * such custom {@link Rule}s must ensure to reset or reinitialize, for example,
  * the repository or namespaces.
- * 
+ *
  * </p>
- * 
+ *
  * TODO It seems that there is an bug in the {@link JukitoRunner} if running
  * tests in parallel. Until this bug is fixed, it is important to execute tests
  * in sbt with the setting "parallelExecution in Test := false" See
  * https://metaphacts.atlassian.net/browse/ID-142
- * 
+ *
  *
  * @author Johannes Trame <jt@metaphacts.com>
  */
@@ -60,14 +60,14 @@ import com.metaphacts.data.rdf.ReadConnection;
 public abstract class AbstractIntegrationTest {
     @Inject
     protected Provider<NamespaceRegistry> ns;
-    
+
     @Inject
     protected Configuration config;
 
     @Inject
     @Rule
     public RepositoryRule repositoryRule;
-    
+
     @Rule
     public ExpectedException exception= ExpectedException.none();
 
@@ -80,7 +80,7 @@ public abstract class AbstractIntegrationTest {
         // assert that triple store is empty
         assertEquals(0,repositoryRule.getReadConnection().size());
     }
-    
+
     protected ReadConnection connection(){
        return this.repositoryRule.getReadConnection();
     }
