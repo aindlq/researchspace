@@ -21,28 +21,28 @@ import * as Slate from 'slate';
 
 /* Marks */
 export const MARK = {
-  bold: 'bold',
-  italic: 'italic',
-  underline: 'underline',
-  strikethrough: 'strikethrough'
+  strong: 'strong',
+  em: 'em',
+  u: 'u',
+  s: 's'
 } as const;
 export type Mark = keyof typeof MARK;
 
 export const Block = {
   empty: 'empty',
-  resource: 'resource',
-  paragraph: 'paragraph',
-  heading_one: 'heading_one',
-  heading_two: 'heading_two',
-  heading_three: 'heading_three',
-  unordered_list: 'unordered_list',
-  ordered_list: 'ordered_list',
-  list_item: 'list_item'
+  embed: 'embed',
+  p: 'p',
+  h1: 'h1',
+  h2: 'h2',
+  h3: 'h3',
+  ul: 'ul',
+  ol: 'ol',
+  li: 'li'
 } as const;
 export type Block = keyof typeof Block;
 
 
-export const DEFAULT_BLOCK = Block.paragraph;
+export const DEFAULT_BLOCK = Block.p;
 
 export const TextAlignment = {
   left: 'left',
@@ -55,10 +55,10 @@ export type TextAlignment = keyof typeof TextAlignment;
 export function isTextBlock(block?: Slate.Block): boolean {
   if (block) {
     const { type } = block;
-    return type === Block.paragraph ||
-      type === Block.heading_one ||
-      type === Block.heading_two ||
-      type === Block.heading_three;
+    return type === Block.p ||
+      type === Block.h1 ||
+      type === Block.h2 ||
+      type === Block.h3;
   } else {
     return false;
   }
@@ -74,10 +74,10 @@ export const schema = {
     ],
   },
   blocks: {
-    [Block.resource]: {
+    [Block.embed]: {
       isVoid: true,
     },
-    [Block.paragraph]: {
+    [Block.p]: {
       nodes: [
         {
           match: {
@@ -89,25 +89,25 @@ export const schema = {
       normalize: (editor: Slate.Editor, error: Slate.SlateError) => {
         switch (error.code) {
           case 'child_text_invalid' as any:
-            editor.setNodeByKey(error.node.key, Block.empty)
-            return
+            editor.setNodeByKey(error.node.key, Block.empty);
+            return;
         }
       }
     },
-    [Block.heading_one]: {
+    [Block.h1]: {
       nodes: [{ match: { object: 'text' } }]
     },
-    [Block.heading_two]: {
+    [Block.h2]: {
       nodes: [{ match: { object: 'text' } }]
     },
-    [Block.heading_three]: {
+    [Block.h3]: {
       nodes: [{ match: { object: 'text' } }]
     },
-    [Block.ordered_list]: {
-      nodes: [{ match: { type: Block.list_item } }]
+    [Block.ol]: {
+      nodes: [{ match: { type: Block.li } }]
     },
-    [Block.unordered_list]: {
-      nodes: [{ match: { type: Block.list_item } }]
+    [Block.ul]: {
+      nodes: [{ match: { type: Block.li } }]
     },
     [Block.empty]: {
       nodes: [
@@ -121,8 +121,8 @@ export const schema = {
       normalize: (editor: Slate.Editor, error: Slate.SlateError) => {
         switch (error.code) {
           case 'child_text_invalid' as any:
-            editor.setNodeByKey(error.node.key, Block.paragraph)
-            return
+            editor.setNodeByKey(error.node.key, Block.p);
+            return;
         }
       }
     },

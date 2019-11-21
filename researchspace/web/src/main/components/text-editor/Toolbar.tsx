@@ -26,26 +26,26 @@ import * as styles from './TextEditor.scss';
 
 const BLOCK_TO_ICON: { [block in Block]: string } = {
   [Block.empty]: 'fa-plus',
-  [Block.resource]: 'fa-file-code-o',
-  [Block.paragraph]: 'fa-paragraph',
-  [Block.heading_one]: 'fa-header',
-  [Block.heading_two]: 'fa-header',
-  [Block.heading_three]: 'fa-header',
-  [Block.ordered_list]: 'fa-list-ol',
-  [Block.unordered_list]: 'fa-list-ul',
-  [Block.list_item]: 'fa-list'
+  [Block.embed]: 'fa-file-code-o',
+  [Block.p]: 'fa-paragraph',
+  [Block.h1]: 'fa-header',
+  [Block.h2]: 'fa-header',
+  [Block.h3]: 'fa-header',
+  [Block.ol]: 'fa-list-ol',
+  [Block.ul]: 'fa-list-ul',
+  [Block.li]: 'fa-list'
 };
 
 const BLOCK_TO_LABEL: { [block in Block]: string } = {
   [Block.empty]: 'Placeholder',
-  [Block.resource]: 'Resource',
-  [Block.paragraph]: 'Paragraph',
-  [Block.heading_one]: 'Heading 1',
-  [Block.heading_two]: 'Heading 2',
-  [Block.heading_three]: 'Heading 3',
-  [Block.ordered_list]: 'Numbered List',
-  [Block.unordered_list]: 'Bulleted List',
-  [Block.list_item]: 'List Item'
+  [Block.embed]: 'Resource',
+  [Block.p]: 'Paragraph',
+  [Block.h1]: 'Heading 1',
+  [Block.h2]: 'Heading 2',
+  [Block.h3]: 'Heading 3',
+  [Block.ol]: 'Numbered List',
+  [Block.ul]: 'Bulleted List',
+  [Block.li]: 'List Item'
 };
 
 const TEXT_ALIGNMENT_TO_ICON: { [alignment in TextAlignment]: string } = {
@@ -60,13 +60,13 @@ export interface ToolbarProps {
   value: Slate.Value;
   editor: React.RefObject<Editor>;
   anchorBlock: Slate.Block
+  onDocumentSave: () => void;
 }
 
 export class Toolbar extends React.Component<ToolbarProps> {
 
   onMarkClick = (event: React.MouseEvent<Button>, markType: Mark) => {
     event.preventDefault();
-
     this.props.editor.current.toggleMark(markType);
   }
 
@@ -93,21 +93,38 @@ export class Toolbar extends React.Component<ToolbarProps> {
 
   onAlignClick = (event: React.MouseEvent<Button>, alignment: TextAlignment) => {
     event.preventDefault();
-
     const { editor, anchorBlock } = this.props;
-    const modifiedBlock = anchorBlock.setIn(['data', 'style', 'alignment'], alignment);
-    // assume that default alignment is left
+
+    const currentAlignment =
+      anchorBlock.data.get('attributes', {})?.style?.textAlign;
+
+    let data = {};
+    if (alignment !== currentAlignment) {
+      data = {
+        style: {
+          textAlign: alignment,
+
+          // we need to have this for "text-align: justify" to work in all browsers.
+          // see https://github.com/ianstormtaylor/slate/issues/2359
+          whiteSpace: alignment === TextAlignment.justify ? 'pre-line' : undefined,
+        }
+      };
+    }
+    const modifiedBlock = anchorBlock.setIn(['data', 'attributes'], data);
     editor.current.setBlocks(modifiedBlock);
   }
 
   hasAlignment = (alignment: TextAlignment): boolean => {
     const { anchorBlock } = this.props;
-    return anchorBlock.data.getIn(['style', 'alignment']) === alignment;
+    return anchorBlock.data.get('attributes')?.style?.textAlign === alignment;
   }
 
   render() {
     return (
       <div className={styles.toolbar}>
+        <div className={styles.toolbarBlock}>
+          <Button bsStyle='success' onClick={this.props.onDocumentSave}>Save</Button>
+        </div>
         <div className={styles.toolbarBlock}>
           <BlockDropdown {...this.props} sidebar={false} />
         </div>
@@ -116,10 +133,10 @@ export class Toolbar extends React.Component<ToolbarProps> {
           <div className={styles.toolbarBlock}>
             <ButtonToolbar>
               <ButtonGroup>
-                {this.markButton(MARK.bold, 'fa-bold')}
-                {this.markButton(MARK.italic, 'fa-italic')}
-                {this.markButton(MARK.underline, 'fa-underline')}
-                {this.markButton(MARK.strikethrough, 'fa-strikethrough')}
+                {this.markButton(MARK.strong, 'fa-bold')}
+                {this.markButton(MARK.em, 'fa-italic')}
+                {this.markButton(MARK.u, 'fa-underline')}
+                {this.markButton(MARK.s, 'fa-strikethrough')}
               </ButtonGroup>
 
               <ButtonGroup>
@@ -156,8 +173,8 @@ export class BlockDropdown extends React.Component<BlockDropdownProps> {
     const { editor, value, anchorBlock } = this.props;
 
     // we need do handle list blocks separately
-    if (blockType === Block.ordered_list || blockType === Block.unordered_list) {
-      const isList = this.hasBlock(Block.list_item);
+    if (blockType === Block.ol || blockType === Block.ul) {
+      const isList = this.hasBlock(Block.li);
       const isTheSameType = anchorBlock.type === blockType;
 
       if (isList && isTheSameType) {
@@ -177,10 +194,10 @@ export class BlockDropdown extends React.Component<BlockDropdownProps> {
 
       } else {
         // or we just set current block to list
-        editor.current.setBlocks(Block.list_item).wrapBlock(blockType);
+        editor.current.setBlocks(Block.li).wrapBlock(blockType);
       }
     } else {
-      const isList = this.hasBlock(Block.list_item);
+      const isList = this.hasBlock(Block.li);
       const isActive = this.hasBlock(blockType);
 
       if (isList) {
@@ -223,9 +240,9 @@ export class BlockDropdown extends React.Component<BlockDropdownProps> {
 
     // for heading blocks we add heading number to the default icon
     const prefix =
-      blockType === Block.heading_one ? '1' :
-        blockType === Block.heading_two ? '2' :
-          blockType === Block.heading_three ? '3' : '';
+      blockType === Block.h1 ? '1' :
+        blockType === Block.h2 ? '2' :
+          blockType === Block.h3 ? '3' : '';
 
     return (
       <span className={styles.dropdownMenuItemIcon}>
@@ -233,7 +250,6 @@ export class BlockDropdown extends React.Component<BlockDropdownProps> {
       </span>
     );
   }
-
 
   render() {
     const { sidebar, anchorBlock } = this.props;
@@ -245,14 +261,14 @@ export class BlockDropdown extends React.Component<BlockDropdownProps> {
           {sidebar ? this.actionIcon(block) : this.actionDescription(block)}
         </Dropdown.Toggle>
         <Dropdown.Menu>
-          {this.actionButton(Block.paragraph)}
+          {this.actionButton(Block.p)}
           <MenuItem divider />
-          {this.actionButton(Block.heading_one)}
-          {this.actionButton(Block.heading_two)}
-          {this.actionButton(Block.heading_three)}
+          {this.actionButton(Block.h1)}
+          {this.actionButton(Block.h2)}
+          {this.actionButton(Block.h3)}
           <MenuItem divider />
-          {this.actionButton(Block.ordered_list)}
-          {this.actionButton(Block.unordered_list)}
+          {this.actionButton(Block.ol)}
+          {this.actionButton(Block.ul)}
         </Dropdown.Menu>
       </Dropdown>
     );

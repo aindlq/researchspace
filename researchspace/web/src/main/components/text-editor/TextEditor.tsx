@@ -20,68 +20,28 @@ import * as _ from 'lodash';
 import * as Kefir from 'kefir';
 import { Editor, RenderMarkProps, RenderNodeProps } from 'slate-react';
 import * as Slate from 'slate';
+import Html from 'slate-html-serializer';
 import * as React from 'react';
-import { Well } from 'react-bootstrap';
+import { Well, Button } from 'react-bootstrap';
+import { html_beautify } from 'js-beautify';
 
 import { Rdf } from 'platform/api/rdf';
+import * as http from 'platform/api/http';
+
 import { SparqlClient, SparqlUtil } from 'platform/api/sparql';
-import { Cancellation } from 'platform/api/async';
+import { Cancellation, requestAsProperty } from 'platform/api/async';
+import { FileManager } from 'platform/api/services/file-manager';
+
+import { Component } from 'platform/api/components';
 import { TemplateItem } from 'platform/components/ui/template';
 import { DropArea } from 'platform/components/dnd/DropArea';
 import { Spinner } from 'platform/components/ui/spinner';
 
 import { MARK, Block, schema, TextAlignment } from './EditorSchema';
+import { SLATE_RULES } from './Serializer';
 import { Sidebar } from './Sidebar';
 import { Toolbar } from './Toolbar';
 import * as styles from './TextEditor.scss';
-
-
-const initialValue = Slate.Value.fromJSON({
-  document: {
-    nodes: [
-      {
-        object: 'block' as 'block',
-        type: 'heading_one',
-        nodes: [
-          {
-            object: 'text' as 'text',
-            leaves: [{
-              object: 'leaf' as 'leaf',
-              text: 'Late Hokusai'
-            }]
-          },
-        ]
-      },
-      {
-        object: 'block' as 'block',
-        type: 'paragraph',
-        nodes: [
-          {
-            object: 'text',
-            leaves: [{
-              object: 'leaf' as 'leaf',
-              text: "The project combines both scholarly inquiry into a focused set of research questions and the creation of an innovative bilingual online resource for Hokusai research.  Our questions build on the pioneering research of Roger Keyes. The Keyes catalogue raisonné of Hokusai’s prints is now held at the British Museum and is a primary inspiration for the project.  The project will complement their findings on Hokusai’s paintings, drawings, prints, and illustrated books, by situating Hokusai more firmly in his historical and social context, by developing their insights into his technique, and by exploring Hokusai’s thought.  We seek to understand: first, how Hokusai's art was animated by his thought and faith; second, how Hokusai’s mature style synthesized and redefined the diverse artistic vocabularies he had mastered earlier in his career, and how we can combine stylistic and seal analysis to help identify Hokusai’s genuine oeuvre; and finally, how Hokusai’s work was enabled by the networks that linked him to collaborators, pupils, patrons, and the public."
-            }]
-          },
-        ],
-      },
-      {
-        object: 'block' as 'block',
-        type: 'paragraph',
-        nodes: [
-          {
-            object: 'text',
-            leaves: [{
-              object: 'leaf' as 'leaf',
-              text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.A line of text in a paragraph.'
-            }]
-          },
-        ],
-      },
-    ],
-  },
-});
-
 
 export interface ResourceTemplateConfig {
   id: string
@@ -93,33 +53,92 @@ export interface ResourceTemplateConfig {
 }
 
 interface TextEditorProps {
+  /**
+   * Text document IRI to load.
+   */
+  documentIri?: string;
+
+  /**
+   * ID of the <semantic-link iri='http://help.metaphacts.com/resource/Storage'>
+   * storage</semantic-link> to load text document content.
+   */
+  storage: string;
+
   resourceTemplates: Array<ResourceTemplateConfig>
+
+  /* file upload config */
+  /**
+   * SPARQL select query to generate a unique IRI for the file to be uploaded.
+   * The must have exactly one projection variable *?newId* with the IRI.
+   *
+   * Also the query can use some variables which will be bound with values at runtime:
+   * * __contextUri__ - see `contextUri` property
+   * * __mediaType__ - Medai type: jpg, pdf. By default = 'auto'xw
+   * * __fileName__ - Name of the file
+   */
+  generateIriQuery?: string
+
+  /**
+   * SPARQL construct query to generate additional meta-data which will be stored toghether with the file meta-data.
+   *
+   * Also the query can use some variables which will be bound with values at runtime:
+   * * __contextUri__ - see `contextUri` property
+   * * __resourceIri__ - IRI generated with `generateIdQuery`
+   * * __mediaType__ - Medai type: jpg, pdf. By default = 'auto'
+   * * __fileName__ - Name of the file
+   */
+  resourceQuery?: string
+
 }
 
 interface TextEditorState {
   value: Slate.Value
   anchorBlock?: Slate.Block
-  availableTemplates: {[objectIri: string]: ResourceTemplateConfig}
+  availableTemplates: { [objectIri: string]: ResourceTemplateConfig }
+  loading: boolean
 }
 
-export class TextEditor extends React.Component<TextEditorProps, TextEditorState> {
+export class TextEditor extends Component<TextEditorProps, TextEditorState> {
   private editorRef: React.RefObject<Editor>;
   private readonly cancellation = new Cancellation();
   private templateSelection = this.cancellation.derive();
 
-  static defaultProps: TextEditorProps = {
-    resourceTemplates: []
+  static defaultProps: Partial<TextEditorProps> = {
+    resourceTemplates: [],
+    storage: 'runtime',
+    resourceQuery: `
+      PREFIX mp: <http://www.metaphacts.com/ontologies/platform#>
+      PREFIX crm: <http://www.cidoc-crm.org/cidoc-crm/>
+      PREFIX crmdig: <http://www.ics.forth.gr/isl/CRMdig/>
+      PREFIX rso: <http://www.researchspace.org/ontology/>
+
+      CONSTRUCT {
+        ?__resourceIri__ a crm:E33_Linguistic_Object,
+                crmdig:D1_Digital_Object,
+                rso:Semantic_Narrative.
+
+        ?__resourceIri__ mp:fileName ?__fileName__.
+        ?__resourceIri__ mp:mediaType "text/html".
+      } WHERE {}
+    `,
+    generateIriQuery: `
+      SELECT ?resourceIri WHERE {
+        BIND(URI(CONCAT(STR(?__contextUri__), "/", ?__fileName__)) as ?resourceIri)
+      }
+    `
   };
 
   state = {
-    value: initialValue,
+    value: Slate.Value.fromJS({}),
     anchorBlock: null as Slate.Block,
     availableTemplates: {},
+    loading: true,
   };
 
-  constructor(props: any) {
-    super(props);
+  constructor(props: TextEditorProps, context) {
+    super(props, context);
     this.editorRef = React.createRef<Editor>();
+    this.state.loading = !!props.documentIri;
   }
 
   onChange = ({ value }: { value: Slate.Value }) => {
@@ -130,10 +149,10 @@ export class TextEditor extends React.Component<TextEditorProps, TextEditorState
     const { children, mark, attributes } = props;
 
     switch (mark.type) {
-      case MARK.bold: return <strong {...attributes}>{children}</strong>;
-      case MARK.italic: return <em {...attributes}>{children}</em>;
-      case MARK.underline: return <u {...attributes}>{children}</u>;
-      case MARK.strikethrough: return <s {...attributes}>{children}</s>;
+      case MARK.strong: return <strong {...attributes}>{children}</strong>;
+      case MARK.em: return <em {...attributes}>{children}</em>;
+      case MARK.u: return <u {...attributes}>{children}</u>;
+      case MARK.s: return <s {...attributes}>{children}</s>;
       default: return next();
     }
   }
@@ -157,7 +176,7 @@ export class TextEditor extends React.Component<TextEditorProps, TextEditorState
 
   onResourceDrop = (drop: Rdf.Iri) => {
     const editor = this.editorRef.current;
-    editor.setBlocks({ type: Block.resource, data: { resource: drop } });
+    editor.setBlocks({ type: Block.embed, data: { attributes: { src: drop.value } } });
     this.templateSelection = this.cancellation.deriveAndCancel(this.templateSelection);
     this.templateSelection.map(
       this.findTemplatesForResource(drop)
@@ -167,10 +186,14 @@ export class TextEditor extends React.Component<TextEditorProps, TextEditorState
         availableTemplates[drop.value] = configs;
         const defaultTemplate = _.first(configs);
         this.setState(
-          {availableTemplates},
+          { availableTemplates },
           () => editor.setBlocks({
-            type: Block.resource,
-            data: { resource: drop, template:  defaultTemplate.id}
+            type: Block.embed,
+            data: {
+              attributes: {
+                src: drop.value, type: 'researchspace/resource', template: defaultTemplate.id
+              }
+            }
           })
         );
       }
@@ -192,10 +215,11 @@ export class TextEditor extends React.Component<TextEditorProps, TextEditorState
     );
   }
 
-  resourceBlock = (props: RenderNodeProps) => {
+  embedBlock = (props: RenderNodeProps) => {
+    const attributes = props.node.data.get('attributes');
     const config =
       _.find(
-        this.props.resourceTemplates, t => t.id === props.node.data.get('template')
+        this.props.resourceTemplates, t => t.id === attributes.template
       );
 
     // if there is no config then available templates are still loading
@@ -204,7 +228,7 @@ export class TextEditor extends React.Component<TextEditorProps, TextEditorState
         <div {...props.attributes} className={styles.resourceBlock}>
           <TemplateItem template={{
             source: config.template,
-            options: { iri: props.node.data.get('resource') }
+            options: { iri: Rdf.iri(attributes.src) }
           }} />
         </div>
       );
@@ -214,29 +238,38 @@ export class TextEditor extends React.Component<TextEditorProps, TextEditorState
   }
 
   renderTextBlock = (tag: string, props: RenderNodeProps): any => {
-    const alignment = props.node.data.getIn(['style', 'alignment']);
-    const style: React.CSSProperties = alignment ? { textAlign: alignment } : {};
-    if (alignment === TextAlignment.justify) {
-      // we need to have this for "text-align: justify" to work in all browsers.
-      // see https://github.com/ianstormtaylor/slate/issues/2359
-      style.whiteSpace = 'pre-line';
-    }
-    return React.createElement(tag, { ...props.attributes, style: style }, props.children);
+    const attributes = props.node.data.get('attributes', {});
+    return React.createElement(tag, { ...props.attributes, ...attributes }, props.children);
   }
 
   renderBlock = (props: RenderNodeProps, editor: Slate.Editor, next: () => any): any => {
     switch (props.node.type) {
       case Block.empty: return this.emptyBlock(props);
-      case Block.resource: return this.resourceBlock(props);
-      case Block.paragraph: return this.renderTextBlock('p', props);
-      case Block.heading_one: return this.renderTextBlock('h1', props);
-      case Block.heading_two: return this.renderTextBlock('h2', props);
-      case Block.heading_three: return this.renderTextBlock('h3', props);
-      case Block.ordered_list: return <ol {...props.attributes}>{props.children}</ol>;
-      case Block.unordered_list: return <ul {...props.attributes}>{props.children}</ul>;
-      case Block.list_item: return <li {...props.attributes}>{props.children}</li>;
+      case Block.embed: return this.embedBlock(props);
+      case Block.p: return this.renderTextBlock('p', props);
+      case Block.h1: return this.renderTextBlock('h1', props);
+      case Block.h2: return this.renderTextBlock('h2', props);
+      case Block.h3: return this.renderTextBlock('h3', props);
+      case Block.ol: return <ol {...props.attributes}>{props.children}</ol>;
+      case Block.ul: return <ul {...props.attributes}>{props.children}</ul>;
+      case Block.li: return <li {...props.attributes}>{props.children}</li>;
       default:
         return next();
+    }
+  }
+
+  componentDidMount() {
+    if (this.props.documentIri) {
+      const documentIri = Rdf.iri(this.props.documentIri);
+      this.cancellation.map(
+        this.fetchDocument(documentIri)
+      ).observe({
+        value: document => {
+          const html = new Html({ rules: SLATE_RULES });
+          this.setState({value: html.deserialize(document), loading: false});
+        },
+        error: error => console.error(error)
+      });
     }
   }
 
@@ -245,7 +278,7 @@ export class TextEditor extends React.Component<TextEditorProps, TextEditorState
 
     const { value, anchorBlock } = this.state;
     let topAnchor = value.anchorBlock;
-    if (value.anchorBlock?.type === Block.list_item) {
+    if (value.anchorBlock?.type === Block.li) {
       topAnchor = value.document.getFurthestBlock(value.anchorBlock.key);
     }
 
@@ -254,30 +287,82 @@ export class TextEditor extends React.Component<TextEditorProps, TextEditorState
     }
   }
 
+  componentWillUnmount() {
+    this.cancellation.cancelAll();
+  }
+
   render() {
-    return (
-      <div className={styles.narrativeHolder}>
-        <div className={styles.toolbarHolder}>
-          <Toolbar {...this.state} editor={this.editorRef} />
-        </div>
-        <div className={styles.sidebarAndEditorHolder}>
-          <div className={styles.sidebarContainer}>
-            <Sidebar {...this.state} editor={this.editorRef} />
-          </div>
-          <div className={styles.editorContainer}>
-            <Editor
-              ref={this.editorRef}
-              spellCheck={false}
-              value={this.state.value}
-              renderMark={this.renderMark}
-              renderNode={this.renderBlock}
-              schema={schema}
-              onChange={this.onChange}
+    if (this.state.loading) {
+      return <Spinner spinnerDelay={0} />;
+    } else {
+      return (
+        <div className={styles.narrativeHolder}>
+          <div className={styles.toolbarHolder}>
+            <Toolbar
+              {...this.state} editor={this.editorRef} onDocumentSave={this.onDocumentSave}
             />
           </div>
+          <div className={styles.sidebarAndEditorHolder}>
+            <div className={styles.sidebarContainer}>
+              <Sidebar {...this.state} editor={this.editorRef} />
+            </div>
+            <div className={styles.editorContainer}>
+              <Editor
+                ref={this.editorRef}
+                spellCheck={false}
+                value={this.state.value}
+                renderMark={this.renderMark}
+                renderNode={this.renderBlock}
+                schema={schema}
+                onChange={this.onChange}
+              />
+            </div>
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
+  }
+
+  private getFileManager(): FileManager {
+    const { repository } = this.context.semanticContext;
+    return new FileManager({ repository });
+  }
+
+  private fetchDocument(documentIri: Rdf.Iri): Kefir.Property<string> {
+    return this.getFileManager().getFileResource(documentIri)
+      .flatMap(resource => {
+        const fileUrl = FileManager.getFileUrl(resource.fileName, this.props.storage);
+        return requestAsProperty(
+          http.get(fileUrl)
+            .accept('text/html')
+        );
+      })
+      .map(response => response.text)
+      .toProperty();
+  }
+
+  private onDocumentSave = () => {
+    const html = new Html({ rules: SLATE_RULES });
+    const content =
+      html_beautify(
+        html.serialize(this.state.value)
+      );
+
+    const blob = new Blob([content]);
+    const file = new File([blob], 'sample_narrative.html');
+
+    this.cancellation.map(
+      this.getFileManager().uploadFileAsResource({
+        file,
+        storage: this.props.storage,
+        generateIriQuery: this.props.generateIriQuery,
+        resourceQuery: this.props.resourceQuery,
+        contextUri: 'http://www.researchspace.org/instances/narratives',
+      })
+    ).observe({
+      value: resource => { console.log('saved'); console.log(resource) },
+      error: error => { console.log('error'); console.log(error) },
+    });
   }
 }
 
