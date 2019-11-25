@@ -27,6 +27,7 @@ import { Block, MARK } from './EditorSchema';
 export const SLATE_RULES: Rule[] = [
   {
     deserialize(el, next) {
+      console.log(el)
       if (el.nodeType === Node.ELEMENT_NODE) {
         const tagName = el.tagName.toLowerCase();
         if (Block[tagName] || MARK[tagName]) {
@@ -56,6 +57,9 @@ export const SLATE_RULES: Rule[] = [
             obj.type,
             obj.data.get('attributes', {})
           );
+        } else if (obj.type === Block.title) {
+          // we serialize title separately as head/title
+          return null;
         } else {
           return React.createElement(
             obj.type,

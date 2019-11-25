@@ -7,5 +7,6 @@ export const sidebarContainer: string;
 export const sidebar: string;
 export const toolbar: string;
 export const toolbarBlock: string;
+export const sidebarDropdown: string;
 export const dropdownMenuItem: string;
 export const dropdownMenuItemIcon: string;

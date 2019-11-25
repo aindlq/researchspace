@@ -66,27 +66,22 @@ export function isTextBlock(block?: Slate.Block): boolean {
 }
 
 /// Schema
-export const schema = {
+export const schema: Slate.SchemaProperties = {
   document: {
     nodes: [
       {
         match: { type: Block.title }, min: 1, max: 1
       },
+      { min: 1 },
       {
         match: _.values(Block).map(block => ({ type: block })),
       },
     ],
-    normalize: (editor, { code, node, child, index }) => {
-      console.log('normalize: ' + code);
-      console.log(index)
-      console.log(node)
+    normalize: (editor: Slate.Editor, error: Slate.SlateError) => {
+      const { code, node, index } = error;
       switch (code) {
-        case 'child_type_invalid': {
-          const type = index === 0 ? Block.title : Block.p;
-          return editor.setNodeByKey(child.key, type);
-        }
         case 'child_min_invalid': {
-          const block = Slate.Block.create(index === 0 ? Block.title : Block.p);
+          const block = Slate.Block.create(index === 0 ? Block.title : Block.empty);
           return editor.insertNodeByKey(node.key, index, block);
         }
       }
@@ -102,7 +97,7 @@ export const schema = {
           match: {
             object: 'text',
             text: (s: string) => s !== '',
-          },
+          } as any,
         },
       ],
       normalize: (editor: Slate.Editor, error: Slate.SlateError) => {
@@ -134,7 +129,7 @@ export const schema = {
           match: {
             object: 'text',
             text: (s: string) => s === '',
-          },
+          } as any,
         },
       ],
       normalize: (editor: Slate.Editor, error: Slate.SlateError) => {

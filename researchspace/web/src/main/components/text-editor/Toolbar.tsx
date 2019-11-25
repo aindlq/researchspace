@@ -57,6 +57,12 @@ const TEXT_ALIGNMENT_TO_ICON: { [alignment in TextAlignment]: string } = {
   [TextAlignment.justify]: 'fa-align-justify',
 };
 
+const MARK_TO_ICON: {[mark in Mark]: string} = {
+  [MARK.s]: 'fa-strikethrough',
+  [MARK.u]: 'fa-underline',
+  [MARK.em]: 'fa-italic',
+  [MARK.strong]: 'fa-bold'
+};
 
 export interface ToolbarProps {
   value: Slate.Value;
@@ -72,10 +78,11 @@ export class Toolbar extends React.Component<ToolbarProps> {
     this.props.editor.current.toggleMark(markType);
   }
 
-  markButton = (markType: Mark, icon: string) => {
+  markButton = (markType: Mark) => {
     const isActive = this.hasMark(markType);
-    const className = `fa ${icon}`;
-    return <Button active={isActive} onMouseDown={event => this.onMarkClick(event, markType)}>
+    const className = `fa ${MARK_TO_ICON[markType]}`;
+    return <Button active={isActive} disabled={!isTextBlock(this.props.anchorBlock)}
+      onMouseDown={event => this.onMarkClick(event, markType)}>
       <i className={className} aria-hidden={true}></i>
     </Button>;
   }
@@ -88,7 +95,8 @@ export class Toolbar extends React.Component<ToolbarProps> {
   alignTextButton = (alignment: TextAlignment) => {
     const isActive = this.hasAlignment(alignment);
     const className = `fa ${TEXT_ALIGNMENT_TO_ICON[alignment]}`;
-    return <Button active={isActive} onMouseDown={event => this.onAlignClick(event, alignment)}>
+    return <Button active={isActive} disabled={!isTextBlock(this.props.anchorBlock)}
+      onMouseDown={event => this.onAlignClick(event, alignment)}>
       <i className={className} aria-hidden={true}></i>
     </Button>;
   }
@@ -112,13 +120,17 @@ export class Toolbar extends React.Component<ToolbarProps> {
         }
       };
     }
-    const modifiedBlock = anchorBlock.setIn(['data', 'attributes'], data);
+    const modifiedBlock = anchorBlock.setIn(['data', 'attributes'], data) as Slate.Block;
     editor.current.setBlocks(modifiedBlock);
   }
 
   hasAlignment = (alignment: TextAlignment): boolean => {
     const { anchorBlock } = this.props;
-    return anchorBlock.data.get('attributes')?.style?.textAlign === alignment;
+    if (anchorBlock) {
+      return anchorBlock.data.get('attributes')?.style?.textAlign === alignment;
+    } else {
+      return false;
+    }
   }
 
   render() {
@@ -131,25 +143,23 @@ export class Toolbar extends React.Component<ToolbarProps> {
           <BlockDropdown {...this.props} sidebar={false} />
         </div>
 
-        {isTextBlock(this.props.anchorBlock) ?
-          <div className={styles.toolbarBlock}>
-            <ButtonToolbar>
-              <ButtonGroup>
-                {this.markButton(MARK.strong, 'fa-bold')}
-                {this.markButton(MARK.em, 'fa-italic')}
-                {this.markButton(MARK.u, 'fa-underline')}
-                {this.markButton(MARK.s, 'fa-strikethrough')}
-              </ButtonGroup>
+        <div className={styles.toolbarBlock}>
+          <ButtonToolbar>
+            <ButtonGroup>
+              {this.markButton(MARK.strong)}
+              {this.markButton(MARK.em)}
+              {this.markButton(MARK.u)}
+              {this.markButton(MARK.s)}
+            </ButtonGroup>
 
-              <ButtonGroup>
-                {this.alignTextButton(TextAlignment.left)}
-                {this.alignTextButton(TextAlignment.center)}
-                {this.alignTextButton(TextAlignment.right)}
-                {this.alignTextButton(TextAlignment.justify)}
-              </ButtonGroup>
-            </ButtonToolbar>
-          </div> : null
-        }
+            <ButtonGroup>
+              {this.alignTextButton(TextAlignment.left)}
+              {this.alignTextButton(TextAlignment.center)}
+              {this.alignTextButton(TextAlignment.right)}
+              {this.alignTextButton(TextAlignment.justify)}
+            </ButtonGroup>
+          </ButtonToolbar>
+        </div>
       </div>
     );
   }
@@ -172,7 +182,7 @@ export class BlockDropdown extends React.Component<BlockDropdownProps> {
   onBlockButtonClick = (blockType: Block, event: any) => {
     event.preventDefault();
 
-    const { editor, value, anchorBlock } = this.props;
+    const { editor, anchorBlock } = this.props;
 
     // we need do handle list blocks separately
     if (blockType === Block.ol || blockType === Block.ul) {
@@ -257,34 +267,25 @@ export class BlockDropdown extends React.Component<BlockDropdownProps> {
     const { sidebar, anchorBlock } = this.props;
     const block = anchorBlock ? anchorBlock.type as Block : Block.empty;
 
-    if (this.hasBlock(Block.title)) {
-      return (
-        <Dropdown id='blocks' pullRight={true} disabled={true}>
-          <Dropdown.Toggle noCaret={true} bsSize={sidebar ? 'small' : 'default'}>
-            {sidebar ? this.actionIcon(block) : this.actionDescription(block)}
-          </Dropdown.Toggle>
-          <Dropdown.Menu></Dropdown.Menu>
-        </Dropdown>
-      );
-    } else {
-      return (
-        <Dropdown id='blocks' pullRight={true}>
-          <Dropdown.Toggle bsSize={sidebar ? 'small' : 'default'}>
-            {sidebar ? this.actionIcon(block) : this.actionDescription(block)}
-          </Dropdown.Toggle>
-          <Dropdown.Menu>
-            {this.actionButton(Block.p)}
-            <MenuItem divider />
-            {this.actionButton(Block.h1)}
-            {this.actionButton(Block.h2)}
-            {this.actionButton(Block.h3)}
-            <MenuItem divider />
-            {this.actionButton(Block.ol)}
-            {this.actionButton(Block.ul)}
-          </Dropdown.Menu>
-        </Dropdown>
-      );
-    }
+    return (
+      <Dropdown id='blocks' pullRight={true} disabled={this.hasBlock(Block.title)}>
+        <Dropdown.Toggle bsSize={sidebar ? 'xsmall' : null}
+          className={sidebar ? styles.sidebarDropdown : ''}
+        >
+          {sidebar ? this.actionIcon(block) : this.actionDescription(block)}
+        </Dropdown.Toggle>
+        <Dropdown.Menu>
+          {this.actionButton(Block.p)}
+          <MenuItem divider />
+          {this.actionButton(Block.h1)}
+          {this.actionButton(Block.h2)}
+          {this.actionButton(Block.h3)}
+          <MenuItem divider />
+          {this.actionButton(Block.ol)}
+          {this.actionButton(Block.ul)}
+        </Dropdown.Menu>
+      </Dropdown>
+    );
   }
 }
 

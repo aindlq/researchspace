@@ -9,6 +9,11 @@
   dependencies:
     regenerator-runtime "^0.13.2"
 
+"@types/is-hotkey@^0.1.1":
+  version "0.1.1"
+  resolved "https://nexus.grapphs.com/repository/npm/@types/is-hotkey/-/is-hotkey-0.1.1.tgz#802e294c2a02f26fbcbe8639c77ef05e38cfdc8c"
+  integrity sha512-QzVKww91fJv/KzARJBS/Im5GS2A8iE64E1HxOed72EmYOvPLG4PBw77QCIUjFl7VwWB3G/SVrxsHedJD/wtn1A==
+
 "@types/js-beautify@^1.8.1":
   version "1.8.1"
   resolved "https://nexus.grapphs.com/repository/npm/@types/js-beautify/-/js-beautify-1.8.1.tgz#c210b3206bece04dc240b1deeec185f7b5b03534"
@@ -39,14 +44,24 @@
 "@types/slate-html-serializer@^0.6.3":
   version "0.6.3"
   resolved "https://nexus.grapphs.com/repository/npm/@types/slate-html-serializer/-/slate-html-serializer-0.6.3.tgz#f18da3c68ccc5b25b12eb4f709b2120b2d2d954e"
+  integrity sha512-edpVOozSya2XkGtJ0qKeP986hOutGS1jff+G1ysv6tPYl+ix0JNDtwjiBJ8iofl07SBghNB0kUr82CI8i+Za2g==
   dependencies:
     "@types/react" "*"
     "@types/slate" "*"
 
-"@types/slate@*", "@types/slate@0.44.10":
-  version "0.44.10"
-  resolved "https://nexus.grapphs.com/repository/npm/@types/slate/-/slate-0.44.10.tgz#b6743ca924892c34f358f0cbb3228c34930eb49e"
-  integrity sha512-q7FT76xMveWHlpl7Aiehf+GH7ok5vHOpPDcw4zvfLPYDtQtYXQjWLDiyaVbtJ9NdiWkq0PxahQ7G0aib9cJMGA==
+"@types/slate-react@0.21.2":
+  version "0.21.2"
+  resolved "https://nexus.grapphs.com/repository/npm/@types/slate-react/-/slate-react-0.21.2.tgz#85161c420d76fd2068fe239b3699b7878cc71424"
+  integrity sha512-kAGTbPOlwpSbWwrr8HaRrTe7TMJGJABVJnlyn35lfeKN78VVmg9/Xdio+APQym/LZMunyIIoRfoTIlrkLbIGfw==
+  dependencies:
+    "@types/react" "*"
+    "@types/slate" "*"
+    immutable "^3.8.2"
+
+"@types/slate@*", "@types/slate@0.44.12":
+  version "0.44.12"
+  resolved "https://nexus.grapphs.com/repository/npm/@types/slate/-/slate-0.44.12.tgz#3c5df1ea15bde0438687027f50898b2f591fd51a"
+  integrity sha512-EBo29O8/Uyb8DmD+RtzgDIFxv63sR1m6S6PygXEFX+A2vHIKiY66x/GZeQ4Omvna4SfyVW1XgoTXmL+cy0jcpA==
   dependencies:
     "@types/react" "*"
     immutable "^3.8.2"
@@ -585,9 +600,10 @@ slate-hotkeys@^0.2.8:
     is-hotkey "0.1.4"
     slate-dev-environment "^0.2.1"
 
-slate-html-serializer@^0.7.34:
-  version "0.7.34"
-  resolved "https://nexus.grapphs.com/repository/npm/slate-html-serializer/-/slate-html-serializer-0.7.34.tgz#4eaaac34de07aca64c473d2561baa70421788871"
+slate-html-serializer@0.8.11:
+  version "0.8.11"
+  resolved "https://nexus.grapphs.com/repository/npm/slate-html-serializer/-/slate-html-serializer-0.8.11.tgz#f65d71306f70ace534bc32ee8c5e5b8202a7b700"
+  integrity sha512-WHwmjccjpAwxvvNv31kMlIKrmTGOIEs+hs1y/08oDXTpnb5EGcmqHV1WOjBx70C9B33i+MLA/sp4ZXVC/r22+w==
   dependencies:
     type-of "^2.0.1"
 
@@ -624,9 +640,10 @@ slate-react@^0.21.16:
     tiny-invariant "^1.0.1"
     tiny-warning "^0.0.3"
 
-slate@^0.44.10:
-  version "0.44.10"
-  resolved "https://nexus.grapphs.com/repository/npm/slate/-/slate-0.44.10.tgz#ac7c3e3cf85570a8723a64a8a7807c881ddbfa8a"
+slate@0.46.1:
+  version "0.46.1"
+  resolved "https://nexus.grapphs.com/repository/npm/slate/-/slate-0.46.1.tgz#339f33d63422672235d57419c88b2f6c7e3efa14"
+  integrity sha512-tO1HYydPbyZ/Lhqmm4T1CbcCS4VvBV2hShELpa8R03S23Uk7XIVj7tfLKrDAhwM3R5T7HM3xT4L6nk0pOyjVrw==
   dependencies:
     debug "^3.1.0"
     direction "^0.1.5"

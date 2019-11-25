@@ -19,11 +19,12 @@
 import * as _ from 'lodash';
 import * as Kefir from 'kefir';
 import { Editor, RenderMarkProps, RenderNodeProps } from 'slate-react';
+import PlaceholderPlugin from 'slate-react-placeholder';
 import * as Slate from 'slate';
+import isHotkey from 'is-hotkey';
 import Html from 'slate-html-serializer';
 import * as React from 'react';
 import { Well, Button } from 'react-bootstrap';
-import { html_beautify } from 'js-beautify';
 
 import { Rdf } from 'platform/api/rdf';
 import * as http from 'platform/api/http';
@@ -37,7 +38,7 @@ import { TemplateItem } from 'platform/components/ui/template';
 import { DropArea } from 'platform/components/dnd/DropArea';
 import { Spinner } from 'platform/components/ui/spinner';
 
-import { MARK, Block, schema, TextAlignment } from './EditorSchema';
+import { MARK, Block, schema, TextAlignment, DEFAULT_BLOCK } from './EditorSchema';
 import { SLATE_RULES } from './Serializer';
 import { Sidebar } from './Sidebar';
 import { Toolbar } from './Toolbar';
@@ -93,10 +94,35 @@ interface TextEditorProps {
 
 interface TextEditorState {
   value: Slate.Value
+  fileName?: string
   anchorBlock?: Slate.Block
-  availableTemplates: { [objectIri: string]: ResourceTemplateConfig }
+  availableTemplates: { [objectIri: string]: ResourceTemplateConfig[] }
   loading: boolean
 }
+
+const plugins = [
+  {
+    queries: {
+      isEmptyTitle: (editor, node: Slate.Block) =>
+        node.type === Block.title && node.text === ''
+      ,
+      isEmptyFirstParagraph: (editor: Slate.Editor, node: Slate.Block) =>
+        editor.value.document.nodes.size === 2 &&
+          node.type === Block.empty &&
+          node.text === ''
+    },
+  },
+  PlaceholderPlugin({
+    placeholder: 'Enter a Title',
+    when: 'isEmptyTitle',
+    style: { color: '#ADD8E6', opacity: '1', fontFamily: 'monospace' },
+  }),
+  PlaceholderPlugin({
+    placeholder: 'Enter narrative',
+    when: 'isEmptyFirstParagraph',
+    style: { color: '#ADD8E6', opacity: '1', fontFamily: 'monospace' },
+  }),
+];
 
 export class TextEditor extends Component<TextEditorProps, TextEditorState> {
   private editorRef: React.RefObject<Editor>;
@@ -128,8 +154,21 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
     `
   };
 
-  state = {
-    value: Slate.Value.fromJS({}),
+  state: TextEditorState = {
+    value: Slate.Value.fromJS({
+      document: {
+        nodes: [
+          {
+            object: 'block' as const,
+            type: Block.title,
+          },
+          {
+            object: 'block' as const,
+            type: Block.empty,
+          },
+        ],
+      }
+    }),
     anchorBlock: null as Slate.Block,
     availableTemplates: {},
     loading: true,
@@ -143,18 +182,6 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
 
   onChange = ({ value }: { value: Slate.Value }) => {
     this.setState({ value });
-  }
-
-  renderMark = (props: RenderMarkProps, editor: Slate.Editor, next: () => any): any => {
-    const { children, mark, attributes } = props;
-
-    switch (mark.type) {
-      case MARK.strong: return <strong {...attributes}>{children}</strong>;
-      case MARK.em: return <em {...attributes}>{children}</em>;
-      case MARK.u: return <u {...attributes}>{children}</u>;
-      case MARK.s: return <s {...attributes}>{children}</s>;
-      default: return next();
-    }
   }
 
   // + drag and drop
@@ -187,14 +214,16 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
         const defaultTemplate = _.first(configs);
         this.setState(
           { availableTemplates },
-          () => editor.setBlocks({
-            type: Block.embed,
-            data: {
-              attributes: {
-                src: drop.value, type: 'researchspace/resource', template: defaultTemplate.id
+          () => {
+            editor.setBlocks({
+              type: Block.embed,
+              data: {
+                attributes: {
+                  src: drop.value, type: 'researchspace/resource', template: defaultTemplate.id
+                }
               }
-            }
-          })
+            });
+          }
         );
       }
     });
@@ -243,30 +272,58 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
   }
 
   renderBlock = (props: RenderNodeProps, editor: Slate.Editor, next: () => any): any => {
-    console.log('rendering block' + props.node.type)
-    switch (props.node.type) {
-      case Block.title: return this.renderTextBlock('h1', props);
+    const { node: { type }, attributes, children } = props;
+    switch (type) {
+      case Block.title: return <h1 {...attributes}>{children}</h1>;
       case Block.empty: return this.emptyBlock(props);
       case Block.embed: return this.embedBlock(props);
-      case Block.p: return this.renderTextBlock('p', props);
-      case Block.h1: return this.renderTextBlock('h1', props);
-      case Block.h2: return this.renderTextBlock('h2', props);
-      case Block.h3: return this.renderTextBlock('h3', props);
-      case Block.ol: return <ol {...props.attributes}>{props.children}</ol>;
-      case Block.ul: return <ul {...props.attributes}>{props.children}</ul>;
-      case Block.li: return <li {...props.attributes}>{props.children}</li>;
+      case Block.p:
+      case Block.h1:
+      case Block.h2:
+      case Block.h3:
+        return this.renderTextBlock(type, props);
+      case Block.ol:
+      case Block.ul:
+      case Block.li:
+        return React.createElement(type, attributes, children);
       default:
         return next();
     }
   }
 
-  private onKeyDown = (event: Event, editor: Slate.Editor, next: () => void) => {
-    next();
-    /* if (Hotkeys.isSplitBlock(event) && !IS_IOS) {
-     *   return hasVoidParent
-     *        ? editor.moveToStartOfNextText()
-     *        : editor.splitBlock()
-     * } */
+  renderMark = (props: RenderMarkProps, editor: Slate.Editor, next: () => any): any => {
+    const { children, mark: { type }, attributes } = props;
+
+    switch (type) {
+      case MARK.strong:
+      case MARK.em:
+      case MARK.u:
+      case MARK.s:
+        return React.createElement(type, attributes, children);
+      default: return next();
+    }
+  }
+
+  private onKeyDown = (event: KeyboardEvent, editor: Slate.Editor, next: () => void) => {
+    if (isHotkey('enter', event)) {
+      const { value } = editor;
+
+      if (
+        value.endBlock.type === Block.title &&
+        value.selection.start.isAtEndOfNode(value.endBlock) &&
+        value.document.getNextBlock(value.endBlock.key).text === ''
+      ) {
+        // if we are at the end of title and the first paragraph is empty
+        // we just move cursor to the paragraph
+        editor.moveToStartOfNextText();
+      } else if (value.selection.start.isAtEndOfNode(value.endBlock)) {
+        editor.insertBlock(DEFAULT_BLOCK);
+      } else {
+        next();
+      }
+    } else {
+      next();
+    }
   }
 
   componentDidMount() {
@@ -275,10 +332,7 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
       this.cancellation.map(
         this.fetchDocument(documentIri)
       ).observe({
-        value: document => {
-          const html = new Html({ rules: SLATE_RULES });
-          this.setState({value: html.deserialize(document), loading: false});
-        },
+        value: this.onDocumentLoad,
         error: error => console.error(error)
       });
     }
@@ -310,12 +364,19 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
         <div className={styles.narrativeHolder}>
           <div className={styles.toolbarHolder}>
             <Toolbar
-              {...this.state} editor={this.editorRef} onDocumentSave={this.onDocumentSave}
+              value={this.state.value}
+              anchorBlock={this.state.anchorBlock}
+              editor={this.editorRef}
+              onDocumentSave={this.onDocumentSave}
             />
           </div>
           <div className={styles.sidebarAndEditorHolder}>
             <div className={styles.sidebarContainer}>
-              <Sidebar {...this.state} editor={this.editorRef} />
+              <Sidebar
+                value={this.state.value}
+                anchorBlock={this.state.anchorBlock}
+                editor={this.editorRef}
+              />
             </div>
             <div className={styles.editorContainer}>
               <Editor
@@ -327,6 +388,7 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
                 onKeyDown={this.onKeyDown}
                 schema={schema}
                 onChange={this.onChange}
+                plugins={plugins}
               />
             </div>
           </div>
@@ -335,33 +397,84 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
     }
   }
 
+  private onDocumentLoad = (payload: [string, string]) => {
+    const [fileName, content] = payload;
+    let htmlTitle: string;
+    const slateHtml =
+      new Html({
+        rules: SLATE_RULES,
+        defaultBlock: Block.p as any,
+        parseHtml: (html: string) => {
+          const parsed = new DOMParser().parseFromString(html, 'text/html');
+          const { title, body } = parsed;
+          htmlTitle = title;
+          return body;
+        }
+      });
+
+    const value = slateHtml.deserialize(content, {toJSON: true});
+
+    value.document.nodes.unshift({
+      object: 'block',
+      type: Block.title,
+      data: {},
+      nodes: [{
+        object: 'text',
+        text: htmlTitle,
+        marks: [],
+      } as any]
+    });
+    this.setState({ value: Slate.Value.fromJS(value), fileName, loading: false });
+  }
+
   private getFileManager(): FileManager {
     const { repository } = this.context.semanticContext;
     return new FileManager({ repository });
   }
 
-  private fetchDocument(documentIri: Rdf.Iri): Kefir.Property<string> {
+  private fetchDocument(documentIri: Rdf.Iri): Kefir.Property<[string, string]> {
     return this.getFileManager().getFileResource(documentIri)
       .flatMap(resource => {
         const fileUrl = FileManager.getFileUrl(resource.fileName, this.props.storage);
         return requestAsProperty(
           http.get(fileUrl)
             .accept('text/html')
+        ).map(
+          response => ([resource.fileName, response.text] as [string, string])
         );
       })
-      .map(response => response.text)
       .toProperty();
   }
 
+  private wrapInHtml(title: string, body: string) {
+    return (
+`<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>${title}</title>
+  </head>
+  <body>${body}</body>
+</html>`
+    );
+  }
+
+
   private onDocumentSave = () => {
+    const { value } = this.state;
+    const titleBlock =
+      value.document.nodes.find(n => n.type === Block.title);
+
     const html = new Html({ rules: SLATE_RULES });
     const content =
-      html_beautify(
-        html.serialize(this.state.value)
+      this.wrapInHtml(
+        titleBlock.text,
+        html.serialize(value)
       );
 
     const blob = new Blob([content]);
-    const file = new File([blob], 'sample_narrative.html');
+    const fileName =
+      this.state.fileName || titleBlock.text.replace(/[^a-z0-9_\-]/gi, '_') + '.html';
+    const file = new File([blob], fileName);
 
     this.cancellation.map(
       this.getFileManager().uploadFileAsResource({
