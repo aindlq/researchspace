@@ -1,0 +1,97 @@
+/*
+ * Copyright (C) 2015-2019, © Trustees of the British Museum
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, you can receive a copy
+ * of the GNU Lesser General Public License from http://www.gnu.org/
+ */
+
+// Text Editor
+
+.narrativeHolder {
+    /* content */
+}
+
+.toolbarHolder {
+  /* content */
+}
+
+.resourceBlock {
+  /* content */
+}
+
+/*
+ we need to set relative position for sidebar and editor holder, so we can
+ get relative position of the editor and use it for sidebar positioning
+*/
+.sidebarAndEditorHolder {
+    position: relative;
+}
+
+.editorContainer {
+  // need for text-align to work properly
+  white-space: normal;
+  margin: 0 200px;
+}
+
+.sidebarContainer {
+    position: absolute;
+}
+
+
+
+// Sidebar
+
+.sidebar {
+    border-right: 2px solid #f2f3f5;
+    padding: 0 5px;
+    position: absolute;
+    transition: transform .15s;
+    left: 100px;
+}
+
+
+// Toolbar
+
+.toolbar {
+    display: flex;
+}
+
+.toolbarBlock {
+    margin: 0 10px;
+}
+
+.dropdown {}
+
+.sidebarDropdown {
+  border: 0;
+}
+
+.dropdownMenuItem {
+    width: 130px;
+    display: inline-block;
+    text-align: start;
+}
+
+.dropdownMenuItemIcon {
+    width: 25px;
+    display: inline-block;
+}
+
+
+.toolbar .dropdownMenuItemIcon {
+    margin-right: 10px;
+}
+.sidebar .dropdownMenuItemIcon {
+    margin-right: 5px;
+}
