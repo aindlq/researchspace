@@ -38,10 +38,12 @@ import { TemplateItem } from 'platform/components/ui/template';
 import { DropArea } from 'platform/components/dnd/DropArea';
 import { Spinner } from 'platform/components/ui/spinner';
 
-import { MARK, Block, schema, TextAlignment, DEFAULT_BLOCK } from './EditorSchema';
+import { MARK, Block, schema, TextAlignment, DEFAULT_BLOCK, Inline, RESOURCE_MIME_TYPE } from './EditorSchema';
 import { SLATE_RULES } from './Serializer';
 import { Sidebar } from './Sidebar';
 import { Toolbar } from './Toolbar';
+import { ExternalLink } from './ExternalLink';
+import { InternalLink } from './InternalLink';
 import * as styles from './TextEditor.scss';
 
 export interface ResourceTemplateConfig {
@@ -108,8 +110,9 @@ const plugins = [
       ,
       isEmptyFirstParagraph: (editor: Slate.Editor, node: Slate.Block) =>
         editor.value.document.nodes.size === 2 &&
-          node.type === Block.empty &&
-          node.text === ''
+        node.type === Block.empty &&
+        node.text === ''
+      ,
     },
   },
   PlaceholderPlugin({
@@ -201,9 +204,14 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
     );
   }
 
-  onResourceDrop = (drop: Rdf.Iri) => {
+  onResourceDrop = (node: Slate.Node) => (drop: Rdf.Iri) => {
     const editor = this.editorRef.current;
-    editor.setBlocks({ type: Block.embed, data: { attributes: { src: drop.value } } });
+    editor
+      .moveToRangeOfNode(node)
+      .setBlocks({
+        type: Block.embed, data: { attributes: { src: drop.value } }
+      });
+
     this.templateSelection = this.cancellation.deriveAndCancel(this.templateSelection);
     this.templateSelection.map(
       this.findTemplatesForResource(drop)
@@ -215,11 +223,13 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
         this.setState(
           { availableTemplates },
           () => {
-            editor.setBlocks({
+            editor
+              .moveToRangeOfNode(node)
+              .setBlocks({
               type: Block.embed,
               data: {
                 attributes: {
-                  src: drop.value, type: 'researchspace/resource', template: defaultTemplate.id
+                  src: drop.value, type: RESOURCE_MIME_TYPE, template: defaultTemplate.id
                 }
               }
             });
@@ -236,7 +246,7 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
       <div {...props.attributes}>
         <DropArea
           dropMessage='Drop here to add item to the narrative.'
-          onDrop={this.onResourceDrop}
+          onDrop={this.onResourceDrop(props.node)}
         >
           {props.children}
         </DropArea>
@@ -286,6 +296,12 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
       case Block.ul:
       case Block.li:
         return React.createElement(type, attributes, children);
+
+      case Inline.externalLink:
+        return <ExternalLink {...props} editor={editor} />;
+      case Inline.internalLink:
+        return <InternalLink {...props} editor={editor} />;
+ 
       default:
         return next();
     }
@@ -305,9 +321,8 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
   }
 
   private onKeyDown = (event: KeyboardEvent, editor: Slate.Editor, next: () => void) => {
+    const { value } = editor;
     if (isHotkey('enter', event)) {
-      const { value } = editor;
-
       if (
         value.endBlock.type === Block.title &&
         value.selection.start.isAtEndOfNode(value.endBlock) &&
@@ -320,6 +335,15 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
         editor.insertBlock(DEFAULT_BLOCK);
       } else {
         next();
+      }
+    } else if (isHotkey('tab', event)) {
+      event.preventDefault();
+      if (value.selection.end.isInNode(value.document.nodes.last())) {
+        editor
+          .moveToEndOfBlock()
+          .insertBlock(DEFAULT_BLOCK);
+      } else {
+        editor.moveToStartOfNextBlock();
       }
     } else {
       next();
@@ -412,7 +436,7 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
         }
       });
 
-    const value = slateHtml.deserialize(content, {toJSON: true});
+    const value = slateHtml.deserialize(content, { toJSON: true });
 
     value.document.nodes.unshift({
       object: 'block',
@@ -448,7 +472,7 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
 
   private wrapInHtml(title: string, body: string) {
     return (
-`<html>
+      `<html>
   <head>
     <meta charset="utf-8" />
     <title>${title}</title>

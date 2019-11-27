@@ -20,8 +20,9 @@ import * as React from 'react';
 import { ButtonToolbar, ButtonGroup, Button, MenuItem, Dropdown } from 'react-bootstrap';
 import * as Slate from 'slate';
 import { Editor } from 'slate-react';
+import { List } from 'immutable';
 
-import { Block, MARK, Mark, DEFAULT_BLOCK, TextAlignment, isTextBlock } from './EditorSchema';
+import { Block, MARK, Mark, DEFAULT_BLOCK, TextAlignment, isTextBlock, Inline } from './EditorSchema';
 import * as styles from './TextEditor.scss';
 
 const BLOCK_TO_ICON: { [block in Block]: string } = {
@@ -57,7 +58,7 @@ const TEXT_ALIGNMENT_TO_ICON: { [alignment in TextAlignment]: string } = {
   [TextAlignment.justify]: 'fa-align-justify',
 };
 
-const MARK_TO_ICON: {[mark in Mark]: string} = {
+const MARK_TO_ICON: { [mark in Mark]: string } = {
   [MARK.s]: 'fa-strikethrough',
   [MARK.u]: 'fa-underline',
   [MARK.em]: 'fa-italic',
@@ -133,6 +134,56 @@ export class Toolbar extends React.Component<ToolbarProps> {
     }
   }
 
+  // link
+  externalLinkButton = () => {
+    return <Button onMouseDown={this.onExternalLinkClick}>
+      <i className='fa fa-external-link' aria-hidden={true}></i>
+    </Button>;
+  }
+
+  onExternalLinkClick = (event: React.MouseEvent<Button>) => {
+    event.preventDefault();
+    const { editor, value } = this.props;
+
+    if (value.selection.isCollapsed) {
+      const linkText = Slate.Text.create({ text: 'link' });
+      editor.current
+            .insertInline({
+              type: Inline.externalLink,
+              nodes: List.of(linkText),
+            });
+    } else {
+      editor.current.wrapInline({
+        type: Inline.externalLink,
+      });
+    }
+  }
+
+  internalLinkButton = () => {
+    return <Button onMouseDown={this.onInternalLinkClick}>
+      <i className='fa fa-chain' aria-hidden={true}></i>
+    </Button>;
+  }
+
+  onInternalLinkClick = (event: React.MouseEvent<Button>) => {
+    event.preventDefault();
+    const { editor, value } = this.props;
+
+    if (value.selection.isCollapsed) {
+      const linkText = Slate.Text.create({ text: 'link' });
+      editor.current
+            .insertInline({
+              type: Inline.internalLink,
+              nodes: List.of(linkText),
+            });
+    } else {
+      editor.current.wrapInline({
+        type: Inline.internalLink,
+      });
+    }
+  }
+
+
   render() {
     return (
       <div className={styles.toolbar}>
@@ -157,6 +208,11 @@ export class Toolbar extends React.Component<ToolbarProps> {
               {this.alignTextButton(TextAlignment.center)}
               {this.alignTextButton(TextAlignment.right)}
               {this.alignTextButton(TextAlignment.justify)}
+            </ButtonGroup>
+
+            <ButtonGroup>
+              {this.internalLinkButton()}
+              {this.externalLinkButton()}
             </ButtonGroup>
           </ButtonToolbar>
         </div>

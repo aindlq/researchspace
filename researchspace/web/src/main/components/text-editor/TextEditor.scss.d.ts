@@ -10,3 +10,7 @@ export const toolbarBlock: string;
 export const sidebarDropdown: string;
 export const dropdownMenuItem: string;
 export const dropdownMenuItemIcon: string;
+export const internalLink: string;
+export const externalLink: string;
+export const externalLinkHolder: string;
+export const linkPopover: string;
