@@ -42,12 +42,21 @@
   // need for text-align to work properly
   white-space: normal;
   margin: 0 200px;
+
+  // for edit mode, later extract
+  & a {
+    cursor: text;
+    text-decoration: underline;
+  }
+
+  & a:hover {
+    background-color:  #f2f3f5;
+  }
 }
 
 .sidebarContainer {
     position: absolute;
 }
-
 
 
 // Sidebar
@@ -94,4 +103,27 @@
 }
 .sidebar .dropdownMenuItemIcon {
     margin-right: 5px;
+}
+
+// links
+.internalLink {
+  /**/
+}
+
+.internalLinkPopover {
+  display: flex;
+  width: 245px;
+
+  & :global(.DropArea--children) {
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+:global {
+  // link editor
+  #external-link-popover .btn-group {
+    display: flex;
+    margin-left: -1px;
+  }
 }
