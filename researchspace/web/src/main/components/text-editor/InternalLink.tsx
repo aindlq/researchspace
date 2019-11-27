@@ -69,9 +69,8 @@ export class InternalLink extends React.Component<InternalLinkProps, InternalLin
       }
       ) as Slate.Inline;
     this.props.editor
-      .moveToRangeOfNode(node)
-      .setInlines(node)
-      .focus();
+        .moveToStartOfNode(node)
+        .setInlines(node);
   }
 
   getPopoverTarget = () => findDOMNode(this.aRef.current);
@@ -92,15 +91,18 @@ export class InternalLink extends React.Component<InternalLinkProps, InternalLin
         <Overlay container={document.body} target={this.getPopoverTarget}
           placement='top' show={isShowPopover}
         >
-          <Popover id='external-link-popover' placement='top' contentEditable={false}>
-            <div className={styles.internalLinkPopover}>
+          <Popover id='internal-link-popover' placement='top' contentEditable={false}>
+            <div className={styles.linkPopover}>
               <DropArea
                 onDrop={this.onResourceDrop}
                 dropMessage='Drop here resource from Clipboard to make a link.'
                 alwaysVisible={isNoHref}
               >
                 {
-                  isNoHref ? null : <ResourceLinkComponent iri={dataAttributes.href} />
+                  isNoHref ? null :
+                  // because ResourceLinkComponent is not update when iri changes
+                  // we need to use react key to recreate it on change
+                  <ResourceLinkComponent key={dataAttributes.href} iri={dataAttributes.href} />
                 }
               </DropArea>
               <Button onMouseDown={this.onUnlink}>
