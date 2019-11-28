@@ -103,10 +103,6 @@ export class ExternalLink extends React.Component<ExternalLinkProps, ExternalLin
     const isNoHref = !dataAttributes.href;
     const isShowPopover = isLinkSelected || isNoHref;
 
-    if (this.popoverRef.current) {
-      console.log('is active: ' + this.popoverRef.current.contains(document.activeElement));
-    }
-
     return (
       <span style={{ position: 'relative' }}>
         <Overlay container={document.body} target={this.getPopoverTarget}
