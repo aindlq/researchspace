@@ -17,15 +17,17 @@
  */
 
 import * as React from 'react';
-import { ButtonToolbar, ButtonGroup, Button, MenuItem, Dropdown, Well } from 'react-bootstrap';
+import { ButtonToolbar, ButtonGroup, Button, MenuItem, Dropdown } from 'react-bootstrap';
 import * as Slate from 'slate';
 import { Editor } from 'slate-react';
 import { List } from 'immutable';
 
-import { Block, MARK, Mark, DEFAULT_BLOCK, TextAlignment, isTextBlock, Inline } from './EditorSchema';
+import {
+  Block, MARK, Mark, DEFAULT_BLOCK, TextAlignment, isTextBlock, Inline
+} from './EditorSchema';
 import * as styles from './TextEditor.scss';
 
-const BLOCK_TO_ICON: { [block in Block]: string } = {
+export const BLOCK_TO_ICON: { [block in Block]: string } = {
   [Block.title]: 'fa-header',
   [Block.empty]: 'fa-plus',
   [Block.embed]: 'fa-file-code-o',
@@ -194,16 +196,6 @@ export class Toolbar extends React.Component<ToolbarProps> {
     }
   }
 
-  onClickRedo = (event: React.MouseEvent<Button>) => {
-    event.preventDefault();
-    this.props.editor.current.redo();
-  }
-
-  onClickUndo = (event: React.MouseEvent<Button>) => {
-    event.preventDefault();
-    this.props.editor.current.undo();
-  }
-
   render() {
     return (
       <ButtonToolbar className={styles.toolbar}>
@@ -212,21 +204,6 @@ export class Toolbar extends React.Component<ToolbarProps> {
             <i className='fa fa-floppy-o' aria-hidden='true'></i>
           </Button>
         </ButtonGroup>
-
-        {/* <ButtonGroup>
-            <Button
-            disabled={this.props.value.data.get('undos')?.size <= 0 }
-            onMouseDown={this.onClickUndo}
-            >
-            <i className='fa fa-undo' aria-hidden={true}></i>
-            </Button>
-            <Button
-            disabled={this.props.value.data.get('redos')?.size <= 0 }
-            onMouseDown={this.onClickRedo}
-            >
-            <i className='fa fa-repeat' aria-hidden={true}></i>
-            </Button>
-            </ButtonGroup> */}
 
         <ButtonGroup>
           <BlockDropdown {...this.props} sidebar={false} />
@@ -296,7 +273,11 @@ export class BlockDropdown extends React.Component<BlockDropdownProps> {
 
       } else {
         // or we just set current block to list
-        editor.current.setBlocks(Block.li).wrapBlock(blockType);
+        editor.current
+              .setBlocks(Block.li)
+              .wrapBlock(blockType)
+              .moveToEndOfText()
+              .focus();
       }
     } else {
       const isList = this.hasBlock(Block.li);

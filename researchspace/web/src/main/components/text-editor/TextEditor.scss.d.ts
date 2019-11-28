@@ -1,5 +1,7 @@
 export const narrativeHolder: string;
+export const title: string;
 export const resourceBlock: string;
+export const resourceBlockActive: string;
 export const sidebarAndEditorHolder: string;
 export const editorContainer: string;
 export const sidebarContainer: string;

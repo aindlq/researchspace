@@ -20,6 +20,7 @@ import * as React from 'react';
 import * as _ from 'lodash';
 import { RenderNodeProps } from 'slate-react';
 import { Well } from 'react-bootstrap';
+import * as classNames from 'classnames';
 
 import { Rdf } from 'platform/api/rdf';
 import { TemplateItem } from 'platform/components/ui/template';
@@ -90,7 +91,8 @@ export class ResourceBlock extends React.Component<ResourceBlockProps> {
   }
 
   render() {
-    const attributes = this.props.node.data.get('attributes', {});
+    const { node, editor } = this.props;
+    const attributes = node.data.get('attributes', {});
     const config = this.getTemplateConfig(attributes.template);
 
     // if there is no config then available templates are still loading
@@ -106,15 +108,23 @@ export class ResourceBlock extends React.Component<ResourceBlockProps> {
           style.width = config.defaults.width;
         }
       }
+      if (config.resizable) {
+        style.resize = 'both',
+        style.overflow = 'auto';
+      }
+
+      const isSelected = editor.value.selection.isCollapsed && editor.value.endBlock === node;
 
       return (
-        <div {...this.props.attributes} className={styles.resourceBlock}>
+        <div {...this.props.attributes}
+        className={
+          classNames(styles.resourceBlock, {[styles.resourceBlockActive]: isSelected})
+        }
+        >
           <div
             style={{
               ...style,
-              resize: 'both',
-              overflow: 'auto',
-              padding: 20,
+              padding: 10,
             }}
             ref={this.onTemplateRendered}
           >

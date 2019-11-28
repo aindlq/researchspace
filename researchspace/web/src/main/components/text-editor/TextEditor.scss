@@ -20,6 +20,8 @@
 
 // Text Editor
 
+$editorHeight: 74vh;
+
 .narrativeHolder {
   :global(.panel) {
     margin-bottom: 0;
@@ -27,7 +29,7 @@
 
   :global(.panel-body) {
     overflow: auto;
-    height: 74vh;
+    height: $editorHeight;
     padding: 0;
   }
 
@@ -41,9 +43,25 @@
   }
 }
 
+.title {
+  font-size: 32px !important;
+}
+
 .resourceBlock {
   display: flex;
   justify-content: center;
+  border: 2px dashed #ffffff;
+  margin: 0 0 ($line-height-computed / 2);
+  padding: 10px;
+
+  // TODO
+  & > div > :global(.card.rs-object-card.rs-search-card) {
+    margin: 0;
+  }
+}
+
+.resourceBlockActive {
+  border: 2px dashed #1d0a6e;
 }
 
 /*
@@ -54,12 +72,14 @@
   position: relative;
   overflow: auto;
   background-color: #f8f9fa;
+  display: flex;
+  justify-content: center;
+  min-height: $editorHeight;
 }
 
 .editorContainer {
   // need for text-align to work properly
   white-space: normal;
-  margin-left: 200px;
 
   background-color: rgb(255, 255, 255);
   width: 794px;
@@ -103,7 +123,8 @@
 // Toolbar
 
 .toolbar {
-  /**/
+  display: flex;
+  justify-content: center;
 }
 
 .dropdown {}

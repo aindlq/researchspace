@@ -40,7 +40,6 @@ import { Spinner } from 'platform/components/ui/spinner';
 import { MARK, Block, schema, DEFAULT_BLOCK, Inline, RESOURCE_MIME_TYPE } from './EditorSchema';
 import { ResourceTemplateConfig } from './Config';
 import { SLATE_RULES } from './Serializer';
-import { Sidebar } from './Sidebar';
 import { Toolbar } from './Toolbar';
 import { ExternalLink } from './ExternalLink';
 import { InternalLink } from './InternalLink';
@@ -111,12 +110,10 @@ const plugins = [
   PlaceholderPlugin({
     placeholder: 'Enter a Title',
     when: 'isEmptyTitle',
-    style: { color: '#ADD8E6', opacity: '1', fontFamily: 'monospace' },
   }),
   PlaceholderPlugin({
     placeholder: 'Enter narrative',
     when: 'isEmptyFirstParagraph',
-    style: { color: '#ADD8E6', opacity: '1', fontFamily: 'monospace' },
   }),
 ];
 
@@ -255,7 +252,7 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
   renderBlock = (props: RenderNodeProps, editor: Slate.Editor, next: () => any): any => {
     const { node: { type }, attributes, children } = props;
     switch (type) {
-      case Block.title: return <h1 {...attributes}>{children}</h1>;
+      case Block.title: return <h1 {...attributes} className={styles.title}>{children}</h1>;
       case Block.empty: return this.emptyBlock(props);
       case Block.embed:
         return <ResourceBlock {...attributes} {...props}
@@ -306,6 +303,16 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
         // if we are at the end of title and the first paragraph is empty
         // we just move cursor to the paragraph
         editor.moveToStartOfNextText();
+      } else if (
+        value.selection.isCollapsed &&
+        value.endBlock.type === Block.li &&
+        value.endBlock.text === ''
+      ) {
+        // we are inside list and clicking enter on the empty li element
+        editor
+          .unwrapBlock(Block.ol)
+          .unwrapBlock(Block.ul)
+          .setBlocks(DEFAULT_BLOCK);
       } else if (
         value.selection.isCollapsed &&
         value.endBlock.type === Block.p &&
@@ -376,13 +383,6 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
             }
           >
             <div className={styles.sidebarAndEditorHolder}>
-              <div className={styles.sidebarContainer}>
-                <Sidebar
-                  value={this.state.value}
-                  anchorBlock={this.state.anchorBlock}
-                  editor={this.editorRef}
-                />
-              </div>
               <div className={styles.editorContainer}>
                 <Editor
                   ref={this.editorRef}
