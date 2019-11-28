@@ -17,7 +17,7 @@
  */
 
 import * as React from 'react';
-import { ButtonToolbar, ButtonGroup, Button, MenuItem, Dropdown } from 'react-bootstrap';
+import { ButtonToolbar, ButtonGroup, Button, MenuItem, Dropdown, Well } from 'react-bootstrap';
 import * as Slate from 'slate';
 import { Editor } from 'slate-react';
 import { List } from 'immutable';
@@ -74,6 +74,9 @@ export interface ToolbarProps {
 
 export class Toolbar extends React.Component<ToolbarProps> {
 
+  isTextSelectionActionDisabled = () =>
+    !isTextBlock(this.props.anchorBlock) || this.props.value.selection.isCollapsed
+
   onMarkClick = (event: React.MouseEvent<Button>, markType: Mark) => {
     event.preventDefault();
     this.props.editor.current.toggleMark(markType);
@@ -82,7 +85,7 @@ export class Toolbar extends React.Component<ToolbarProps> {
   markButton = (markType: Mark) => {
     const isActive = this.hasMark(markType);
     const className = `fa ${MARK_TO_ICON[markType]}`;
-    return <Button active={isActive} disabled={!isTextBlock(this.props.anchorBlock)}
+    return <Button active={isActive} disabled={this.isTextSelectionActionDisabled()}
       onMouseDown={event => this.onMarkClick(event, markType)}>
       <i className={className} aria-hidden={true}></i>
     </Button>;
@@ -136,9 +139,13 @@ export class Toolbar extends React.Component<ToolbarProps> {
 
   // link
   externalLinkButton = () => {
-    return <Button onMouseDown={this.onExternalLinkClick}>
-      <i className='fa fa-external-link' aria-hidden={true}></i>
-    </Button>;
+    return (
+      <Button onMouseDown={this.onExternalLinkClick}
+        disabled={this.isTextSelectionActionDisabled()}
+      >
+        <i className='fa fa-external-link' aria-hidden={true}></i>
+      </Button>
+    );
   }
 
   onExternalLinkClick = (event: React.MouseEvent<Button>) => {
@@ -148,10 +155,10 @@ export class Toolbar extends React.Component<ToolbarProps> {
     if (value.selection.isCollapsed) {
       const linkText = Slate.Text.create({ text: 'link' });
       editor.current
-            .insertInline({
-              type: Inline.externalLink,
-              nodes: List.of(linkText),
-            });
+        .insertInline({
+          type: Inline.externalLink,
+          nodes: List.of(linkText),
+        });
     } else {
       editor.current.wrapInline({
         type: Inline.externalLink,
@@ -160,9 +167,13 @@ export class Toolbar extends React.Component<ToolbarProps> {
   }
 
   internalLinkButton = () => {
-    return <Button onMouseDown={this.onInternalLinkClick}>
-      <i className='fa fa-chain' aria-hidden={true}></i>
-    </Button>;
+    return (
+      <Button onMouseDown={this.onInternalLinkClick}
+        disabled={this.isTextSelectionActionDisabled()}
+      >
+        <i className='fa fa-chain' aria-hidden={true}></i>
+      </Button>
+    );
   }
 
   onInternalLinkClick = (event: React.MouseEvent<Button>) => {
@@ -172,10 +183,10 @@ export class Toolbar extends React.Component<ToolbarProps> {
     if (value.selection.isCollapsed) {
       const linkText = Slate.Text.create({ text: 'link' });
       editor.current
-            .insertInline({
-              type: Inline.internalLink,
-              nodes: List.of(linkText),
-            });
+        .insertInline({
+          type: Inline.internalLink,
+          nodes: List.of(linkText),
+        });
     } else {
       editor.current.wrapInline({
         type: Inline.internalLink,
@@ -183,40 +194,63 @@ export class Toolbar extends React.Component<ToolbarProps> {
     }
   }
 
+  onClickRedo = (event: React.MouseEvent<Button>) => {
+    event.preventDefault();
+    this.props.editor.current.redo();
+  }
+
+  onClickUndo = (event: React.MouseEvent<Button>) => {
+    event.preventDefault();
+    this.props.editor.current.undo();
+  }
 
   render() {
     return (
-      <div className={styles.toolbar}>
-        <div className={styles.toolbarBlock}>
-          <Button bsStyle='success' onClick={this.props.onDocumentSave}>Save</Button>
-        </div>
-        <div className={styles.toolbarBlock}>
+      <ButtonToolbar className={styles.toolbar}>
+        <ButtonGroup>
+          <Button bsStyle='primary' onClick={this.props.onDocumentSave}>
+            <i className='fa fa-floppy-o' aria-hidden='true'></i>
+          </Button>
+        </ButtonGroup>
+
+        {/* <ButtonGroup>
+            <Button
+            disabled={this.props.value.data.get('undos')?.size <= 0 }
+            onMouseDown={this.onClickUndo}
+            >
+            <i className='fa fa-undo' aria-hidden={true}></i>
+            </Button>
+            <Button
+            disabled={this.props.value.data.get('redos')?.size <= 0 }
+            onMouseDown={this.onClickRedo}
+            >
+            <i className='fa fa-repeat' aria-hidden={true}></i>
+            </Button>
+            </ButtonGroup> */}
+
+        <ButtonGroup>
           <BlockDropdown {...this.props} sidebar={false} />
-        </div>
+        </ButtonGroup>
 
-        <div className={styles.toolbarBlock}>
-          <ButtonToolbar>
-            <ButtonGroup>
-              {this.markButton(MARK.strong)}
-              {this.markButton(MARK.em)}
-              {this.markButton(MARK.u)}
-              {this.markButton(MARK.s)}
-            </ButtonGroup>
+        <ButtonGroup>
+          {this.markButton(MARK.strong)}
+          {this.markButton(MARK.em)}
+          {this.markButton(MARK.u)}
+          {this.markButton(MARK.s)}
+        </ButtonGroup>
 
-            <ButtonGroup>
-              {this.alignTextButton(TextAlignment.left)}
-              {this.alignTextButton(TextAlignment.center)}
-              {this.alignTextButton(TextAlignment.right)}
-              {this.alignTextButton(TextAlignment.justify)}
-            </ButtonGroup>
+        <ButtonGroup>
+          {this.alignTextButton(TextAlignment.left)}
+          {this.alignTextButton(TextAlignment.center)}
+          {this.alignTextButton(TextAlignment.right)}
+          {this.alignTextButton(TextAlignment.justify)}
+        </ButtonGroup>
 
-            <ButtonGroup>
-              {this.internalLinkButton()}
-              {this.externalLinkButton()}
-            </ButtonGroup>
-          </ButtonToolbar>
-        </div>
-      </div>
+        <ButtonGroup>
+          {this.internalLinkButton()}
+          {this.externalLinkButton()}
+        </ButtonGroup>
+      </ButtonToolbar>
     );
   }
 }

@@ -21,15 +21,29 @@
 // Text Editor
 
 .narrativeHolder {
-    /* content */
-}
+  :global(.panel) {
+    margin-bottom: 0;
+  }
 
-.toolbarHolder {
-  /* content */
+  :global(.panel-body) {
+    overflow: auto;
+    height: 74vh;
+    padding: 0;
+  }
+
+  :global(.panel-default > .panel-heading) {
+    background-color: #ecf0f1;
+    border-color: #DDD;
+
+    a {
+     color: #2F323B;
+    }
+  }
 }
 
 .resourceBlock {
-  /* content */
+  display: flex;
+  justify-content: center;
 }
 
 /*
@@ -37,15 +51,25 @@
  get relative position of the editor and use it for sidebar positioning
 */
 .sidebarAndEditorHolder {
-    position: relative;
+  position: relative;
+  overflow: auto;
+  background-color: #f8f9fa;
 }
 
 .editorContainer {
   // need for text-align to work properly
   white-space: normal;
-  margin: 0 200px;
+  margin-left: 200px;
+
+  background-color: rgb(255, 255, 255);
+  width: 794px;
+  box-shadow: 0 1px 3px 1px rgba(60,64,67,.15);
 
   // for edit mode, later extract
+
+  & > div {
+    padding: 20px 96px;
+  }
   & a {
     cursor: text;
     text-decoration: underline;
@@ -64,22 +88,22 @@
 // Sidebar
 
 .sidebar {
-    border-right: 2px solid #f2f3f5;
+    border-right: 3px solid #f2f3f5;
     padding: 0 5px;
     position: absolute;
     transition: transform .15s;
-    left: 100px;
+    left: 141px;
+
+    :global(.btn) {
+      background-color: #f8f9fa;
+    }
 }
 
 
 // Toolbar
 
 .toolbar {
-    display: flex;
-}
-
-.toolbarBlock {
-    margin: 0 10px;
+  /**/
 }
 
 .dropdown {}

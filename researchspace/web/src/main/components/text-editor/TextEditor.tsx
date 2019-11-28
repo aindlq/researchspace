@@ -19,41 +19,34 @@
 import * as _ from 'lodash';
 import * as Kefir from 'kefir';
 import { Editor, RenderMarkProps, RenderNodeProps } from 'slate-react';
+import { Panel } from 'react-bootstrap';
 import PlaceholderPlugin from 'slate-react-placeholder';
 import * as Slate from 'slate';
 import isHotkey from 'is-hotkey';
 import Html from 'slate-html-serializer';
 import * as React from 'react';
-import { Well, Button } from 'react-bootstrap';
 
 import { Rdf } from 'platform/api/rdf';
 import * as http from 'platform/api/http';
 
-import { SparqlClient, SparqlUtil } from 'platform/api/sparql';
+import { SparqlClient } from 'platform/api/sparql';
 import { Cancellation, requestAsProperty } from 'platform/api/async';
 import { FileManager } from 'platform/api/services/file-manager';
 
 import { Component } from 'platform/api/components';
-import { TemplateItem } from 'platform/components/ui/template';
 import { DropArea } from 'platform/components/dnd/DropArea';
 import { Spinner } from 'platform/components/ui/spinner';
 
-import { MARK, Block, schema, TextAlignment, DEFAULT_BLOCK, Inline, RESOURCE_MIME_TYPE } from './EditorSchema';
+import { MARK, Block, schema, DEFAULT_BLOCK, Inline, RESOURCE_MIME_TYPE } from './EditorSchema';
+import { ResourceTemplateConfig } from './Config';
 import { SLATE_RULES } from './Serializer';
 import { Sidebar } from './Sidebar';
 import { Toolbar } from './Toolbar';
 import { ExternalLink } from './ExternalLink';
 import { InternalLink } from './InternalLink';
 import * as styles from './TextEditor.scss';
+import { ResourceBlock } from './ResourceBlock';
 
-export interface ResourceTemplateConfig {
-  id: string
-  // URI of type template could be applied to
-  type: string
-  // Human-readable description of template
-  label: string
-  template: string
-}
 
 interface TextEditorProps {
   /**
@@ -105,7 +98,7 @@ interface TextEditorState {
 const plugins = [
   {
     queries: {
-      isEmptyTitle: (editor, node: Slate.Block) =>
+      isEmptyTitle: (_editor, node: Slate.Block) =>
         node.type === Block.title && node.text === ''
       ,
       isEmptyFirstParagraph: (editor: Slate.Editor, node: Slate.Block) =>
@@ -226,13 +219,13 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
             editor
               .moveToRangeOfNode(node)
               .setBlocks({
-              type: Block.embed,
-              data: {
-                attributes: {
-                  src: drop.value, type: RESOURCE_MIME_TYPE, template: defaultTemplate.id
+                type: Block.embed,
+                data: {
+                  attributes: {
+                    src: drop.value, type: RESOURCE_MIME_TYPE, template: defaultTemplate.id
+                  }
                 }
-              }
-            });
+              });
           }
         );
       }
@@ -254,28 +247,6 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
     );
   }
 
-  embedBlock = (props: RenderNodeProps) => {
-    const attributes = props.node.data.get('attributes');
-    const config =
-      _.find(
-        this.props.resourceTemplates, t => t.id === attributes.template
-      );
-
-    // if there is no config then available templates are still loading
-    if (config) {
-      return (
-        <div {...props.attributes} className={styles.resourceBlock}>
-          <TemplateItem template={{
-            source: config.template,
-            options: { iri: Rdf.iri(attributes.src) }
-          }} />
-        </div>
-      );
-    } else {
-      return <Well><Spinner /></Well>;
-    }
-  }
-
   renderTextBlock = (tag: string, props: RenderNodeProps): any => {
     const attributes = props.node.data.get('attributes', {});
     return React.createElement(tag, { ...props.attributes, ...attributes }, props.children);
@@ -286,7 +257,9 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
     switch (type) {
       case Block.title: return <h1 {...attributes}>{children}</h1>;
       case Block.empty: return this.emptyBlock(props);
-      case Block.embed: return this.embedBlock(props);
+      case Block.embed:
+        return <ResourceBlock {...attributes} {...props}
+          resourceTemplates={this.props.resourceTemplates} />;
       case Block.p:
       case Block.h1:
       case Block.h2:
@@ -301,13 +274,13 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
         return <ExternalLink {...props} editor={editor} />;
       case Inline.internalLink:
         return <InternalLink {...props} editor={editor} />;
- 
+
       default:
         return next();
     }
   }
 
-  renderMark = (props: RenderMarkProps, editor: Slate.Editor, next: () => any): any => {
+  renderMark = (props: RenderMarkProps, _editor: Slate.Editor, next: () => any): any => {
     const { children, mark: { type }, attributes } = props;
 
     switch (type) {
@@ -325,13 +298,19 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
     if (isHotkey('enter', event)) {
       if (
         value.endBlock.type === Block.title &&
+        value.document.nodes.size === 2 &&
+        value.selection.isCollapsed &&
         value.selection.start.isAtEndOfNode(value.endBlock) &&
         value.document.getNextBlock(value.endBlock.key).text === ''
       ) {
         // if we are at the end of title and the first paragraph is empty
         // we just move cursor to the paragraph
         editor.moveToStartOfNextText();
-      } else if (value.selection.start.isAtEndOfNode(value.endBlock)) {
+      } else if (
+        value.selection.isCollapsed &&
+        value.endBlock.type === Block.p &&
+        value.selection.start.isAtEndOfNode(value.endBlock)
+      ) {
         editor.insertBlock(DEFAULT_BLOCK);
       } else {
         next();
@@ -386,36 +365,39 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
     } else {
       return (
         <div className={styles.narrativeHolder}>
-          <div className={styles.toolbarHolder}>
-            <Toolbar
-              value={this.state.value}
-              anchorBlock={this.state.anchorBlock}
-              editor={this.editorRef}
-              onDocumentSave={this.onDocumentSave}
-            />
-          </div>
-          <div className={styles.sidebarAndEditorHolder}>
-            <div className={styles.sidebarContainer}>
-              <Sidebar
+          <Panel
+            header={
+              <Toolbar
                 value={this.state.value}
                 anchorBlock={this.state.anchorBlock}
                 editor={this.editorRef}
+                onDocumentSave={this.onDocumentSave}
               />
+            }
+          >
+            <div className={styles.sidebarAndEditorHolder}>
+              <div className={styles.sidebarContainer}>
+                <Sidebar
+                  value={this.state.value}
+                  anchorBlock={this.state.anchorBlock}
+                  editor={this.editorRef}
+                />
+              </div>
+              <div className={styles.editorContainer}>
+                <Editor
+                  ref={this.editorRef}
+                  spellCheck={false}
+                  value={this.state.value}
+                  renderMark={this.renderMark}
+                  renderNode={this.renderBlock}
+                  onKeyDown={this.onKeyDown}
+                  schema={schema}
+                  onChange={this.onChange}
+                  plugins={plugins}
+                />
+              </div>
             </div>
-            <div className={styles.editorContainer}>
-              <Editor
-                ref={this.editorRef}
-                spellCheck={false}
-                value={this.state.value}
-                renderMark={this.renderMark}
-                renderNode={this.renderBlock}
-                onKeyDown={this.onKeyDown}
-                schema={schema}
-                onChange={this.onChange}
-                plugins={plugins}
-              />
-            </div>
-          </div>
+          </Panel>
         </div>
       );
     }
