@@ -1,11 +1,11 @@
 {{#each this}}
 
-<semantic-form new-subject-template="http://researchspace.rem.sh/person/\{{UUID}}"
+<semantic-form new-subject-template="http://www.researchspace.org/entity/{{localName}}/\{{UUID}}"
   fields='[[
   fieldDefinitions
     type="http://www.researchspace.org/instances/fields/EntityType"
     label="http://www.researchspace.org/instances/fields/EntityHasLabel"
-    image="http://www.researchspace.org/instances/fields/EntityHasImage"
+    image="http://www.cidoc-crm.org/cidoc-crm/P138i_has_representation"
     connect="http://www.researchspace.org/instances/fields/EntityhasConnection"
 
   {{#each kps}}
@@ -17,7 +17,7 @@
     entity-type-iri="{{iri}}"
     type-iri='http://www.researchspace.org/instances/fields/EntityType'
     label-iri='http://www.researchspace.org/instances/fields/EntityHasLabel'
-    image-iri='http://www.researchspace.org/instances/fields/EntityHasImage'
+    image-iri='http://www.cidoc-crm.org/cidoc-crm/P138i_has_representation'
   ></ontodia-entity-metadata>
 
   <semantic-form-text-input for="label"></semantic-form-text-input>

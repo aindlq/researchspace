@@ -21,6 +21,7 @@ package org.researchspace.kp;
 import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -45,6 +46,7 @@ import org.eclipse.rdf4j.common.iteration.Iterations;
 import org.eclipse.rdf4j.model.BNode;
 
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Model;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.ValueFactory;
@@ -133,6 +135,19 @@ public class KnowledgePatternGenerator {
             .add(FIELDS.XSD_DATATYPE, this.vf.createIRI(XSD.ANY_URI));
         addAll(builder, FIELDS.RANGE, Models.getPropertyIRIs(onto, prop, RDFS.RANGE));
 
+        // generate KP select pattern and add it to the KP
+        String selectPattern =
+          "SELECT ?value ?label WHERE {\n" +
+          "  $subject <" + prop.stringValue() + "> ?value . \n" +
+          "  ?value rdfs:label ?label ." +
+          "}";
+        BNode selectQueryNode = this.vf.createBNode();
+        builder
+          .add(kpIri, FIELDS.SELECT_PATTERN, selectQueryNode)
+          .subject(selectQueryNode)
+          .add(RDF.TYPE, SP.QUERY_CLASS)
+          .add(SP.TEXT_PROPERTY, selectPattern);
+
         return new PointedGraph(kpIri, builder.build());
     }
 
@@ -143,12 +158,23 @@ public class KnowledgePatternGenerator {
         builder.subject(kpIri);
         addAll(builder, FIELDS.XSD_DATATYPE, Models.getPropertyIRIs(onto, prop, RDFS.RANGE));
 
+        // generate KP select pattern and add it to the KP
+        String selectPattern =
+          "SELECT ?value WHERE {\n" +
+          "  $subject <" + prop.stringValue() + "> ?value . \n" +
+          "}";
+        BNode selectQueryNode = this.vf.createBNode();
+        builder
+          .add(kpIri, FIELDS.SELECT_PATTERN, selectQueryNode)
+          .subject(selectQueryNode)
+          .add(RDF.TYPE, SP.QUERY_CLASS)
+          .add(SP.TEXT_PROPERTY, selectPattern);
+
         return new PointedGraph(kpIri, builder.build());
     }
 
     private IRI generateBasicKp(ModelBuilder builder, IRI ontoIri, Model onto, IRI prop) {
-        IRI kpIri =
-            this.vf.createIRI("http://www.researchspace.org/instances/fields/", prop.getLocalName());
+        IRI kpIri = prop;
 
         builder.subject(kpIri)
             .add(RDF.TYPE, FIELDS.FIELD_TYPE)
@@ -157,8 +183,14 @@ public class KnowledgePatternGenerator {
             .add(FIELDS.MIN_OCCURS, "0")
             .add(FIELDS.MAX_OCCURS, "unbound");
 
+        Set<Literal> labels = Models.getPropertyLiterals(onto, prop, RDFS.LABEL);
+        if (labels.isEmpty()) {
+          builder.add(RDFS.LABEL, prop.getLocalName());
+        } else {
+          addAll(builder, RDFS.LABEL, labels);
+        }
+
         addAll(builder, RDFS.COMMENT, Models.getPropertyLiterals(onto, prop, RDFS.COMMENT));
-        addAll(builder, RDFS.LABEL, Models.getPropertyLiterals(onto, prop, RDFS.LABEL));
         addAll(builder, FIELDS.DOMAIN, Models.getPropertyIRIs(onto, prop, RDFS.DOMAIN));
 
         // generate KP insert pattern and add it to the KP
@@ -171,18 +203,6 @@ public class KnowledgePatternGenerator {
             .add(RDF.TYPE, SP.QUERY_CLASS)
             .add(SP.TEXT_PROPERTY, insertPattern);
 
-        // generate KP select pattern and add it to the KP
-        String selectPattern =
-            "SELECT ?value ?label WHERE {\n" +
-            "  $subject <" + prop.stringValue() + "> ?value . \n" +
-            "  ?value rdfs:label ?label ." +
-            "}";
-        BNode selectQueryNode = this.vf.createBNode();
-        builder
-            .add(kpIri, FIELDS.SELECT_PATTERN, selectQueryNode)
-            .subject(selectQueryNode)
-            .add(RDF.TYPE, SP.QUERY_CLASS)
-            .add(SP.TEXT_PROPERTY, selectPattern);
 
         return kpIri;
     };
