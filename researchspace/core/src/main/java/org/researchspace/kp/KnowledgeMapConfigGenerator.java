@@ -68,10 +68,12 @@ class KP {
 
 class Class {
     public String iri;
+    public String localName;
     public Collection<KP> kps;
 
-    public Class(String iri, Collection<KP> kps) {
+  public Class(String iri, String localName, Collection<KP> kps) {
         this.iri = iri;
+        this.localName = localName;
         this.kps = kps;
     }
 }
@@ -104,7 +106,7 @@ public class KnowledgeMapConfigGenerator {
                 QueryResults.asList(con.prepareTupleQuery(QueryLanguage.SPARQL, classesQuery).evaluate())
                 .stream()
                 .map(bs -> (IRI)bs.getBinding("class").getValue())
-                .map(c -> new Class(c.stringValue(), createOpKps(con, c)))
+                .map(c -> new Class(c.stringValue(), c.getLocalName(), createOpKps(con, c)))
                 .collect(Collectors.toList());
             logger.trace("Generating KM config for {} classes", cs.size());
 
