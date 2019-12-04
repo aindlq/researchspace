@@ -108,9 +108,12 @@ export class ResourceBlock extends React.Component<ResourceBlockProps> {
           style.width = config.defaults.width;
         }
       }
+
       if (config.resizable) {
         style.resize = 'both',
         style.overflow = 'auto';
+      } else {
+        style.flex = 1;
       }
 
       const isSelected = editor.value.selection.isCollapsed && editor.value.endBlock === node;
