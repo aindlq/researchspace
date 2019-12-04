@@ -23,17 +23,17 @@
 $editorHeight: 74vh;
 
 .narrativeHolder {
-  :global(.panel) {
+  & > :global(.panel) {
     margin-bottom: 0;
+
+    & > :global(.panel-body) {
+      overflow: auto;
+      height: $editorHeight;
+      padding: 0;
+    }
   }
 
-  :global(.panel-body) {
-    overflow: auto;
-    height: $editorHeight;
-    padding: 0;
-  }
-
-  :global(.panel-default > .panel-heading) {
+  & > :global(.panel-default > .panel-heading) {
     background-color: #ecf0f1;
     border-color: #DDD;
 
@@ -41,6 +41,33 @@ $editorHeight: 74vh;
      color: #2F323B;
     }
   }
+
+  // DropArea styling
+  :global(.DropArea--dropArea) {
+    height: 30px;
+  }
+
+  :global(.DropArea--dropArea.mp-droppable-enabled > .DropArea--children) {
+    display: none;
+  }
+
+  :global(.DropArea--messageWrapper) {
+    height: 100%;
+    display: none;
+  }
+
+  :global(.DropArea--dropArea.mp-droppable-enabled .DropArea--messageWrapper) {
+    display: block;
+  }
+
+  :global(.DropArea--dropMessage) {
+    height: 100% !important;
+  }
+
+  :global(.DropArea--dropArea.mp-droppable-hover .DropArea--dropMessage) {
+    background-color: rgba(29, 10, 110, 0.3) !important;
+  }
+
 }
 
 .title {
