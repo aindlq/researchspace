@@ -132,8 +132,7 @@ public class KnowledgeMapConfigGenerator {
     private List<KP> createOpKps(RepositoryConnection con, Value classIri) {
         String queryString =
             "SELECT DISTINCT ?kp ?datatype WHERE {\n" +
-            "  <" + classIri + "> rdfs:subClassOf* ?class . \n" +
-            "  ?kp <http://www.metaphacts.com/ontology/fields#domain> ?class. \n" +
+            "  ?kp <http://www.metaphacts.com/ontology/fields#domain> <" + classIri + ">. \n" +
         "  FILTER(?kp NOT IN(<http://www.researchspace.org/instances/fields/EntityType>, <http://www.researchspace.org/instances/fields/EntityHasLabel>, <http://www.researchspace.org/instances/fields/EntityHasImage>, <http://www.researchspace.org/instances/fields/EntityhasConnection>)). \n" +
             "  ?kp <http://www.metaphacts.com/ontology/fields#xsdDatatype> ?datatype . \n" +
             "} ";
