@@ -274,10 +274,10 @@ export class BlockDropdown extends React.Component<BlockDropdownProps> {
       } else {
         // or we just set current block to list
         editor.current
-              .setBlocks(Block.li)
-              .wrapBlock(blockType)
-              .moveToEndOfText()
-              .focus();
+          .setBlocks(Block.li)
+          .wrapBlock(blockType)
+          .moveToEndOfText()
+          .focus();
       }
     } else {
       const isList = this.hasBlock(Block.li);
@@ -291,7 +291,11 @@ export class BlockDropdown extends React.Component<BlockDropdownProps> {
           .setBlocks(isActive ? DEFAULT_BLOCK : blockType);
       } else {
         // if it is not list then just toggle the block type
-        editor.current.setBlocks(isActive ? DEFAULT_BLOCK : blockType);
+        editor.current
+          .moveToRangeOfNode(anchorBlock)
+          .setBlocks(isActive ? DEFAULT_BLOCK : blockType)
+          .moveToEndOfBlock()
+          .focus();
       }
     }
 

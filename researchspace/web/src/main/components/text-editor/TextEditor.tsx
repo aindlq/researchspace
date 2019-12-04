@@ -315,7 +315,6 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
           .setBlocks(DEFAULT_BLOCK);
       } else if (
         value.selection.isCollapsed &&
-        value.endBlock.type === Block.p &&
         value.selection.start.isAtEndOfNode(value.endBlock)
       ) {
         editor.insertBlock(DEFAULT_BLOCK);
