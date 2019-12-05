@@ -33,11 +33,11 @@ import { SparqlClient } from 'platform/api/sparql';
 import { Cancellation, requestAsProperty } from 'platform/api/async';
 import { FileManager } from 'platform/api/services/file-manager';
 
-import { Component } from 'platform/api/components';
+import { Component, ComponentContext } from 'platform/api/components';
 import { DropArea } from 'platform/components/dnd/DropArea';
 import { Spinner } from 'platform/components/ui/spinner';
 
-import { MARK, Block, schema, DEFAULT_BLOCK, Inline, RESOURCE_MIME_TYPE } from './EditorSchema';
+import { Mark, Block, schema, DEFAULT_BLOCK, Inline, RESOURCE_MIME_TYPE } from './EditorSchema';
 import { ResourceTemplateConfig } from './Config';
 import { SLATE_RULES } from './Serializer';
 import { Toolbar } from './Toolbar';
@@ -74,7 +74,8 @@ interface TextEditorProps {
   generateIriQuery?: string
 
   /**
-   * SPARQL construct query to generate additional meta-data which will be stored toghether with the file meta-data.
+   * SPARQL construct query to generate additional meta-data
+   * which will be stored toghether with the file meta-data.
    *
    * Also the query can use some variables which will be bound with values at runtime:
    * * __contextUri__ - see `contextUri` property
@@ -97,7 +98,7 @@ interface TextEditorState {
 const plugins = [
   {
     queries: {
-      isEmptyTitle: (_editor, node: Slate.Block) =>
+      isEmptyTitle: (_editor: Slate.Editor, node: Slate.Block) =>
         node.type === Block.title && node.text === ''
       ,
       isEmptyFirstParagraph: (editor: Slate.Editor, node: Slate.Block) =>
@@ -167,7 +168,7 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
     loading: true,
   };
 
-  constructor(props: TextEditorProps, context) {
+  constructor(props: TextEditorProps, context: ComponentContext) {
     super(props, context);
     this.editorRef = React.createRef<Editor>();
     this.state.loading = !!props.documentIri;
@@ -281,10 +282,10 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
     const { children, mark: { type }, attributes } = props;
 
     switch (type) {
-      case MARK.strong:
-      case MARK.em:
-      case MARK.u:
-      case MARK.s:
+      case Mark.strong:
+      case Mark.em:
+      case Mark.u:
+      case Mark.s:
         return React.createElement(type, attributes, children);
       default: return next();
     }
@@ -490,8 +491,8 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
         contextUri: 'http://www.researchspace.org/instances/narratives',
       })
     ).observe({
-      value: resource => { console.log('saved'); console.log(resource) },
-      error: error => { console.log('error'); console.log(error) },
+      value: resource => { console.log('saved'); console.log(resource); },
+      error: error => { console.log('error'); console.log(error); },
     });
   }
 }

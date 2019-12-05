@@ -70,6 +70,10 @@ $editorHeight: 74vh;
 
 }
 
+:global(#internal-link-popover .DropArea--dropArea.mp-droppable-hover .DropArea--dropMessage) {
+  background-color: rgba(29, 10, 110, 0.3) !important;
+}
+
 .title {
   font-size: 32px !important;
 }

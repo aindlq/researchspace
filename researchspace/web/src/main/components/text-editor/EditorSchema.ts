@@ -23,13 +23,13 @@ export const RESOURCE_MIME_TYPE =
   'researchspace/resource';
 
 /* Marks */
-export const MARK = {
+export const Mark = {
   strong: 'strong',
   em: 'em',
   u: 'u',
   s: 's'
 } as const;
-export type Mark = keyof typeof MARK;
+export type Mark = keyof typeof Mark;
 
 export const Block = {
   title: 'title',
@@ -88,7 +88,6 @@ export const schema: Slate.SchemaProperties = {
       const { code, node, index } = error;
       switch (code) {
         case 'child_min_invalid': {
-          console.log('child_min_invalid')
           const block = Slate.Block.create(index === 0 ? Block.title : Block.empty);
           return editor.insertNodeByKey(node.key, index, block);
         }
@@ -123,11 +122,8 @@ export const schema: Slate.SchemaProperties = {
         },
       ],
       normalize: (editor: Slate.Editor, error: Slate.SlateError) => {
-        console.log('error in schema');
-        console.log(error.code)
         switch (error.code) {
           case 'child_text_invalid' as any:
-            console.log('adding empty node')
             editor.setNodeByKey(error.node.key, Block.empty);
             return;
         }
@@ -160,7 +156,6 @@ export const schema: Slate.SchemaProperties = {
       normalize: (editor: Slate.Editor, error: Slate.SlateError) => {
         switch (error.code) {
           case 'child_text_invalid' as any:
-            console.log('changing empty to block')
             editor.setNodeByKey(error.node.key, Block.p);
             return;
         }

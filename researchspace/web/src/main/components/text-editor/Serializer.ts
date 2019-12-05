@@ -22,7 +22,7 @@ import { Rule } from 'slate-html-serializer';
 
 import { ModuleRegistry } from 'platform/api/module-loader';
 
-import { Block, MARK, Inline, RESOURCE_MIME_TYPE } from './EditorSchema';
+import { Block, Mark, Inline, RESOURCE_MIME_TYPE } from './EditorSchema';
 
 export const SLATE_RULES: Rule[] = [
   {
@@ -61,7 +61,7 @@ export const SLATE_RULES: Rule[] = [
     deserialize(el, next) {
       if (el.nodeType === Node.ELEMENT_NODE) {
         const tagName = el.tagName.toLowerCase();
-        if (Block[tagName] || MARK[tagName]) {
+        if (Block[tagName] || Mark[tagName]) {
           const data: {attributes?: {}} = {};
           const attributes = getAttributesAsReactProps(el);
           if (!_.isEmpty(attributes)) {
@@ -81,7 +81,7 @@ export const SLATE_RULES: Rule[] = [
     serialize(obj, children) {
       if (
         (obj.object === 'block' && Block[obj.type]) ||
-          (obj.object === 'mark' && MARK[obj.type])
+          (obj.object === 'mark' && Mark[obj.type])
       ) {
         if (obj.type === Block.embed) {
           return React.createElement(

@@ -23,7 +23,7 @@ import { Editor } from 'slate-react';
 import { List } from 'immutable';
 
 import {
-  Block, MARK, Mark, DEFAULT_BLOCK, TextAlignment, isTextBlock, Inline
+  Block, Mark, DEFAULT_BLOCK, TextAlignment, isTextBlock, Inline
 } from './EditorSchema';
 import * as styles from './TextEditor.scss';
 
@@ -61,10 +61,10 @@ const TEXT_ALIGNMENT_TO_ICON: { [alignment in TextAlignment]: string } = {
 };
 
 const MARK_TO_ICON: { [mark in Mark]: string } = {
-  [MARK.s]: 'fa-strikethrough',
-  [MARK.u]: 'fa-underline',
-  [MARK.em]: 'fa-italic',
-  [MARK.strong]: 'fa-bold'
+  [Mark.s]: 'fa-strikethrough',
+  [Mark.u]: 'fa-underline',
+  [Mark.em]: 'fa-italic',
+  [Mark.strong]: 'fa-bold'
 };
 
 export interface ToolbarProps {
@@ -206,14 +206,14 @@ export class Toolbar extends React.Component<ToolbarProps> {
         </ButtonGroup>
 
         <ButtonGroup>
-          <BlockDropdown {...this.props} sidebar={false} />
+          <BlockDropdown {...this.props} />
         </ButtonGroup>
 
         <ButtonGroup>
-          {this.markButton(MARK.strong)}
-          {this.markButton(MARK.em)}
-          {this.markButton(MARK.u)}
-          {this.markButton(MARK.s)}
+          {this.markButton(Mark.strong)}
+          {this.markButton(Mark.em)}
+          {this.markButton(Mark.u)}
+          {this.markButton(Mark.s)}
         </ButtonGroup>
 
         <ButtonGroup>
@@ -236,7 +236,6 @@ export class Toolbar extends React.Component<ToolbarProps> {
 export interface BlockDropdownProps {
   value: Slate.Value;
   editor: React.RefObject<Editor>;
-  sidebar: boolean;
   anchorBlock: Slate.Block;
 }
 
@@ -339,15 +338,13 @@ export class BlockDropdown extends React.Component<BlockDropdownProps> {
   }
 
   render() {
-    const { sidebar, anchorBlock } = this.props;
+    const { anchorBlock } = this.props;
     const block = anchorBlock ? anchorBlock.type as Block : Block.empty;
 
     return (
       <Dropdown id='blocks' pullRight={true} disabled={this.hasBlock(Block.title)}>
-        <Dropdown.Toggle bsSize={sidebar ? 'xsmall' : null}
-          className={sidebar ? styles.sidebarDropdown : ''}
-        >
-          {sidebar ? this.actionIcon(block) : this.actionDescription(block)}
+        <Dropdown.Toggle>
+          {this.actionDescription(block)}
         </Dropdown.Toggle>
         <Dropdown.Menu>
           {this.actionButton(Block.p)}
