@@ -95,8 +95,10 @@ public class KnowledgePatternGenerator {
             Model ontology =
                 QueryResults.asModel(conn.getStatements(null, null, null, graphs));
 
+            // we generate KPs only for properties that are in the same namespace as
+            // current ontology, to make sure that we don't override already generated KPs
             Set<Resource> objectProperties =
-                ontology.filter(null, RDF.TYPE, OWL.OBJECTPROPERTY).subjects();
+                ontology.filter(null, RDF.TYPE, OWL.OBJECTPROPERTY).subjects().stream().filter(op -> op.stringValue().startsWith(ontoIri.stringValue())).collect(Collectors.toSet());
             logger.trace("Generating KPs for {} object properties", objectProperties.size());
             objectProperties.forEach(op -> saveKp(generateOpKp(ontology, ontoIri, (IRI)op)));
 
@@ -137,9 +139,8 @@ public class KnowledgePatternGenerator {
 
         // generate KP select pattern and add it to the KP
         String selectPattern =
-          "SELECT ?value ?label WHERE {\n" +
+          "SELECT ?value WHERE {\n" +
           "  $subject <" + prop.stringValue() + "> ?value . \n" +
-          "  ?value rdfs:label ?label ." +
           "}";
         BNode selectQueryNode = this.vf.createBNode();
         builder
