@@ -95,10 +95,11 @@ public class KnowledgeMapConfigGenerator {
             String classesQuery =
                 "SELECT DISTINCT ?class WHERE {\n" +
                 "  {\n" +
-                "    ?kp <http://www.metaphacts.com/ontology/fields#domain> ?class. \n" +
+                "    ?kp <http://www.metaphacts.com/ontology/fields#domain> ?c. \n" +
                 "  } UNION {\n" +
-                "    ?kp <http://www.metaphacts.com/ontology/fields#range> ?class . \n" +
+                "    ?kp <http://www.metaphacts.com/ontology/fields#range> ?c . \n" +
                 "  }\n" +
+                "  ?class rdfs:subClassOf* ?c" +
                 "}";
 
             List<Class> cs =
