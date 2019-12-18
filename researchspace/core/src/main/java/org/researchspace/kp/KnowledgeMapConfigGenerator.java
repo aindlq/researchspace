@@ -134,7 +134,7 @@ public class KnowledgeMapConfigGenerator {
             "SELECT DISTINCT ?kp ?datatype WHERE {\n" +
             "  <" + classIri + "> rdfs:subClassOf* ?class . \n" +
             "  ?kp <http://www.metaphacts.com/ontology/fields#domain> ?class. \n" +
-        "  FILTER(?kp NOT IN(<http://www.researchspace.org/instances/fields/EntityType>, <http://www.researchspace.org/instances/fields/EntityHasLabel>, <http://www.researchspace.org/instances/fields/EntityHasImage>, <http://www.researchspace.org/instances/fields/EntityhasConnection>)). \n" +
+            "  FILTER(?kp NOT IN(<http://www.researchspace.org/instances/fields/EntityType>, <http://www.researchspace.org/instances/fields/EntityHasLabel>, <http://www.cidoc-crm.org/cidoc-crm/P138i_has_representation>, <http://www.researchspace.org/instances/fields/EntityhasConnection>)). \n" +
             "  ?kp <http://www.metaphacts.com/ontology/fields#xsdDatatype> ?datatype . \n" +
             "} ";
 
