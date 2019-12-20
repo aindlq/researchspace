@@ -95,6 +95,11 @@ export interface Props {
    * @default 150
    */
   frameMinSize?: number;
+
+  initialView?: {
+    view: string
+    resource: string
+  }
 }
 
 export interface State {
@@ -110,10 +115,17 @@ export class DashboardComponent extends Component<Props, State> {
 
   constructor(props: Props, context: any) {
     super(props, context);
+
+    let item: Item = Item.emptyItem();
+    if (props.initialView) {
+      item = {
+        ...item,
+        resourceIri: props.initialView.resource,
+        viewId: props.initialView.view
+      };
+    }
     this.state = {
-      items: [
-        Item.emptyItem(),
-      ],
+      items: [item],
     };
   }
 
