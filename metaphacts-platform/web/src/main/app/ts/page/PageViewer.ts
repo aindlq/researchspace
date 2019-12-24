@@ -37,6 +37,7 @@ interface Props {
   context?: Rdf.Iri;
   params?: { [index: string]: string };
   noBackdrop?: boolean;
+  noScroll?: boolean;
 }
 
 interface State {
@@ -73,8 +74,10 @@ export class PageViewerComponent extends Component<Props, State> {
   }
 
   public componentDidUpdate() {
-    window.scroll(0, 0); // scroll to top when we navigated to the page
-    this.scrollToAnchor();
+    if (!this.props.noScroll) {
+      window.scroll(0, 0); // scroll to top when we navigated to the page
+      this.scrollToAnchor();
+    }
   }
 
   public componentWillReceiveProps(nextProps) {

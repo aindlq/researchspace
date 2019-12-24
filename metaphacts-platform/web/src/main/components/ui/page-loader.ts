@@ -66,6 +66,7 @@ class PageLoaderComponent extends Component<{iri: string}, {}> {
       return PageViewer({
         iri: Rdf.iri(this.props.iri),
         context: getCurrentResource(),
+        noScroll: true,
         params: {...getCurrentUrl().search(true), ...NavigationUtils.extractParams(this.props)},
       } );
     }
