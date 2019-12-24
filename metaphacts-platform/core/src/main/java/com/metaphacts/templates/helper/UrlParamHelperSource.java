@@ -45,13 +45,18 @@ public class UrlParamHelperSource {
         TemplateContext context = (TemplateContext) options.context.model();
         UriInfo uriInfo = context.getUriInfo();
         String paramName = checkNotNull(param0,"Parameter name must not null or empty.");
+        Boolean escape = (Boolean) options.hash.getOrDefault("escape", Boolean.TRUE);
         if (uriInfo != null) {
             for (Entry<String, List<String>> e : uriInfo.getQueryParameters().entrySet())
                 if(e.getKey().equals(paramName)){
                     //TODO later we may provide additional hashParameter separator
                     String params = StringUtils.join(e.getValue(), ",");
                     logger.trace("Extracted requested url param with name {}: {}", paramName, params);
-                    return new Handlebars.SafeString(StringEscapeUtils.escapeHtml4(params).toString()).toString();
+                    if (escape) {
+                        return new Handlebars.SafeString(StringEscapeUtils.escapeHtml4(params).toString()).toString();
+                    } else {
+                        return params;
+                    }
                 }
         }
         logger.trace("Did not find requested url param with name {}", paramName);
