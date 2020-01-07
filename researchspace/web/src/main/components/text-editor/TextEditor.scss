@@ -72,6 +72,20 @@ $editorHeight: 74vh;
 
 .title {
   font-size: 32px !important;
+  position: relative;
+
+  &::before {
+    display: inline-block;
+    background-image: $drag-handle-image;
+    width: 5px;
+    height: 22px;
+    margin-right: 12px;
+    cursor: grab;
+    content: " ";
+    position: absolute;
+    left: -10px;
+    top: 3px;
+  }
 }
 
 .resourceBlock {

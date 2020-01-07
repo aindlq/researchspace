@@ -28,6 +28,7 @@ import * as React from 'react';
 
 import { Rdf } from 'platform/api/rdf';
 import * as http from 'platform/api/http';
+import { SparqlUtil } from 'platform/api/sparql';
 
 import { SparqlClient } from 'platform/api/sparql';
 import { Cancellation, requestAsProperty } from 'platform/api/async';
@@ -35,6 +36,7 @@ import { FileManager } from 'platform/api/services/file-manager';
 
 import { Component } from 'platform/api/components';
 import { DropArea } from 'platform/components/dnd/DropArea';
+import { Draggable } from 'platform/components/dnd';
 import { Spinner } from 'platform/components/ui/spinner';
 
 import { MARK, Block, schema, DEFAULT_BLOCK, Inline, RESOURCE_MIME_TYPE } from './EditorSchema';
@@ -138,6 +140,7 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
 
         ?__resourceIri__ mp:fileName ?__fileName__.
         ?__resourceIri__ mp:mediaType "text/html".
+        ?__resourceIri__ rdfs:label ?__label__ .
       } WHERE {}
     `,
     generateIriQuery: `
@@ -235,6 +238,7 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
     return (
       <div {...props.attributes}>
         <DropArea
+          shouldReactToDrag={iri => iri.value !== this.props.documentIri }
           dropMessage='Drop here to add item to the narrative.'
           onDrop={this.onResourceDrop(props.node)}
         >
@@ -252,7 +256,19 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
   renderBlock = (props: RenderNodeProps, editor: Slate.Editor, next: () => any): any => {
     const { node: { type }, attributes, children } = props;
     switch (type) {
-      case Block.title: return <h1 {...attributes} className={styles.title}>{children}</h1>;
+      case Block.title:
+        if (this.props.documentIri) {
+          return (
+            <Draggable iri={this.props.documentIri}>
+              <span>
+                <span className='drag-gripper'></span>
+                <h1 {...attributes} className={styles.title}>{children}</h1>
+              </span>
+            </Draggable>
+          );
+        } else {
+          return <h1 {...attributes} className={styles.title}>{children}</h1>;
+        }
       case Block.empty: return this.emptyBlock(props);
       case Block.embed:
         return <ResourceBlock {...attributes} {...props}
@@ -481,12 +497,23 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
       this.state.fileName || titleBlock.text.replace(/[^a-z0-9_\-]/gi, '_') + '.html';
     const file = new File([blob], fileName);
 
+    const parsedResouercQuery =
+      SparqlUtil.parseQuery(
+        this.props.resourceQuery
+      );
+    const resourceQuery =
+      SparqlUtil.serializeQuery(
+        SparqlClient.setBindings(
+          parsedResouercQuery, {'__label__': Rdf.literal(titleBlock.text)}
+        )
+      );
+
     this.cancellation.map(
       this.getFileManager().uploadFileAsResource({
         file,
         storage: this.props.storage,
         generateIriQuery: this.props.generateIriQuery,
-        resourceQuery: this.props.resourceQuery,
+        resourceQuery: resourceQuery,
         contextUri: 'http://www.researchspace.org/instances/narratives',
       })
     ).observe({

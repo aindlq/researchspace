@@ -201,7 +201,7 @@ export class Toolbar extends React.Component<ToolbarProps> {
       <ButtonToolbar className={styles.toolbar}>
         <ButtonGroup>
           <Button bsStyle='primary' onClick={this.props.onDocumentSave}>
-            <i className='fa fa-floppy-o' aria-hidden='true'></i>
+            <i className='fa fa-floppy-o' aria-hidden='true'></i> &nbsp; Save
           </Button>
         </ButtonGroup>
 
