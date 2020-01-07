@@ -182,8 +182,12 @@ public class FileManager {
         );
 
         // adding resource to container
-        fileContainer.add(resourcePointedGraph);
 
+        if (fileContainer.containsLDPResource(resourceIri)) {
+            fileContainer.update(resourcePointedGraph);
+        } else {
+            fileContainer.add(resourcePointedGraph);
+        }
         return resourceIri;
     }
 
