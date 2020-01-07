@@ -360,7 +360,7 @@ const DEFAULT_FACTORY: OntodiaFactory = {
   createToolbar: (componentProps, toolbarProps) => createElement(Toolbar, toolbarProps),
   onNewDigaramInitialized: (componentProps, workspace: Workspace) => {
     workspace.forceLayout();
-    workspace.zoomToFit();
+    return workspace.zoomToFit();
   },
   getPersistence: mode => {
     switch (mode.type) {
@@ -1070,7 +1070,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
         diagram: res.diagram,
       })
     ).then(() => {
-      performDiagramLayout(this.props, this.workspace);
+      return performDiagramLayout(this.props, this.workspace);
     });
   }
 
@@ -1116,7 +1116,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
         diagram: res.diagram,
       });
     }).then(() => {
-      this.workspace.zoomToFit();
+      return this.workspace.zoomToFit();
     });
   }
 
@@ -1125,11 +1125,6 @@ export class Ontodia extends Component<OntodiaProps, State> {
       const editor = this.workspace.getEditor();
       const element = editor.model.elements.find(({data}) => data.id === iri);
       if (element) {
-        // shift canvas to the right to encompass newly opened connections menu
-        this.workspace.centerTo({
-          x: element.position.x + element.size.width / 2 + 500,
-          y: element.position.y + element.size.height / 2,
-        });
         editor.showConnectionsMenu(element);
       }
     });
@@ -1152,7 +1147,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
         linkTypeOptions: this.props.linkSettings as ReadonlyArray<LinkTypeOptions>,
       },
     }).then(() => {
-      performDiagramLayout(this.props, this.workspace);
+      return performDiagramLayout(this.props, this.workspace);
     }));
   }
 
