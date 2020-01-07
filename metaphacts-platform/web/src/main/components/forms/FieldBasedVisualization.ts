@@ -60,14 +60,16 @@ export interface FieldDefinitionWithData extends FieldDefinitionProp {
 
 interface State {
   fieldsData: Array<FieldDefinitionWithData>;
-  isLoading: boolean
+  isLoading: boolean;
+  noData: boolean;
 }
 export class FieldBasedVisualization extends Component<FieldBasedVisualizationConfig, State> {
   constructor(props, context) {
     super(props, context);
     this.state = {
       fieldsData: [],
-      isLoading: false,
+      isLoading: true,
+      noData: true,
     };
   }
 
@@ -90,6 +92,7 @@ export class FieldBasedVisualization extends Component<FieldBasedVisualizationCo
         options: {
           subject: this.props.subject,
           fields: this.state.fieldsData,
+          noData: this.state.noData,
         },
       },
     });
@@ -113,7 +116,12 @@ export class FieldBasedVisualization extends Component<FieldBasedVisualizationCo
         )
       )
     ).onValue(
-      values => this.setState({fieldsData: values})
+      values =>
+        this.setState({
+          fieldsData: values,
+          isLoading: false,
+          noData: _.every(values, v => v.values === null)
+        })
     );
   }
 }
