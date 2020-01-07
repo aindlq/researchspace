@@ -331,6 +331,16 @@ export interface OntodiaConfig {
    * Controls whether Ontodia should navigate to a newly saved diagram.
    */
   postSaving?: 'navigate' | 'none';
+
+  /*
+   * If true left panel is initially open.
+   */
+  leftPanelInitiallyOpen?: boolean;
+
+  /*
+   * If true right panel is initially open.
+   */
+  rightPanelInitiallyOpen?: boolean;
 }
 
 export type OntodiaPersistenceMode = FormBasedPersistenceProps | OntologyPersistenceProps;
@@ -543,6 +553,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
       collapseNavigator, hideToolbar, hideHalo, hideScrollBars,
       saveDiagramLabel, persistChangesLabel, propertySuggestionQuery,
       zoomRequireCtrl, nodeStyles,
+      leftPanelInitiallyOpen, rightPanelInitiallyOpen,
     } = this.props;
 
     const {createWorkspace, createToolbar} = OntodiaExtension.get() || DEFAULT_FACTORY;
@@ -554,8 +565,8 @@ export class Ontodia extends Component<OntodiaProps, State> {
       language: preferredLanguage,
       onSaveDiagram: readonly ? undefined : this.onSaveDiagramPressed,
       onPersistChanges: authoringMode ? this.onPersistAuthoredChanges : undefined,
-      leftPanelInitiallyOpen: readonly ? false : undefined,
-      rightPanelInitiallyOpen: readonly ? false : undefined,
+      leftPanelInitiallyOpen: readonly ? false : leftPanelInitiallyOpen,
+      rightPanelInitiallyOpen: readonly ? false : rightPanelInitiallyOpen,
       toolbar: createToolbar(this.props, {
         saveDiagramLabel,
         persistChangesLabel,
