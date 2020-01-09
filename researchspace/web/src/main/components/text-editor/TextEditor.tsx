@@ -461,7 +461,11 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
           {}
         ) as { string: Kefir.Property<any> };
 
-    if (embeds) {
+    if (_.isEmpty(embeds)) {
+      this.setState({
+        value: Slate.Value.fromJS(value), fileName, loading: false,
+      });
+    } else {
       Kefir.combine(
         embeds
       ).onValue(
@@ -470,10 +474,6 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
           availableTemplates: templates
         })
       );
-    } else {
-      this.setState({
-        value: Slate.Value.fromJS(value), fileName, loading: false,
-      });
     }
   }
 
