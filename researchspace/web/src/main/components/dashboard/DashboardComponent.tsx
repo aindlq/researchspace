@@ -371,6 +371,11 @@ export class DashboardComponent extends Component<Props, State> {
       children: [{
         type: WorkspaceLayoutType.Column,
         children: [{
+          id: 'thought-board',
+          type: WorkspaceLayoutType.Component,
+          content: React.Children.only(this.props.children) as React.ReactElement<any>,
+          heading: 'Clipboard',
+        }, {
           id: 'items',
           type: WorkspaceLayoutType.Component,
           content: <div className={styles.itemsContainer}>
@@ -387,11 +392,6 @@ export class DashboardComponent extends Component<Props, State> {
               <i className='fa fa-plus'/> Add frame
             </button>
           </div>,
-        }, {
-          id: 'thought-board',
-          type: WorkspaceLayoutType.Component,
-          content: React.Children.only(this.props.children) as React.ReactElement<any>,
-          heading: 'Thought Board',
         }],
         defaultSize: 300,
       }, {
