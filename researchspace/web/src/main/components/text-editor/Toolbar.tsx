@@ -23,8 +23,9 @@ import { Editor } from 'slate-react';
 import { List } from 'immutable';
 
 import {
-  Block, MARK, Mark, DEFAULT_BLOCK, TextAlignment, isTextBlock, Inline
+  Block, MARK, Mark, DEFAULT_BLOCK, TextAlignment, isTextBlock, Inline, RESOURCE_MIME_TYPE
 } from './EditorSchema';
+import { ResourceTemplateConfig } from './Config';
 import * as styles from './TextEditor.scss';
 
 export const BLOCK_TO_ICON: { [block in Block]: string } = {
@@ -71,6 +72,7 @@ export interface ToolbarProps {
   value: Slate.Value;
   editor: React.RefObject<Editor>;
   anchorBlock: Slate.Block
+  options?: { [objectIri: string]: ResourceTemplateConfig[] }
   onDocumentSave: () => void;
 }
 
@@ -196,6 +198,20 @@ export class Toolbar extends React.Component<ToolbarProps> {
     }
   }
 
+  onResourceTemplateSelected = (templateId: string) => {
+    const attributes = this.props.anchorBlock.data.get('attributes');
+    this.props.editor.current.setBlocks({
+      type: Block.embed,
+      data: {
+        attributes: {
+          ...attributes,
+          template: templateId,
+          style: {}
+        }
+      }
+    });
+  }
+
   render() {
     return (
       <ButtonToolbar className={styles.toolbar}>
@@ -206,7 +222,16 @@ export class Toolbar extends React.Component<ToolbarProps> {
         </ButtonGroup>
 
         <ButtonGroup>
-          <BlockDropdown {...this.props} sidebar={false} />
+          {
+            this.props.anchorBlock?.type === Block.embed ?
+              <ResourceDropdown
+                options={this.props.options[this.props.anchorBlock.data.get('attributes').src]}
+                anchorBlock={this.props.anchorBlock}
+                onSelect={this.onResourceTemplateSelected}
+              />
+              :
+              <BlockDropdown {...this.props} sidebar={false} />
+          }
         </ButtonGroup>
 
         <ButtonGroup>
@@ -231,6 +256,67 @@ export class Toolbar extends React.Component<ToolbarProps> {
     );
   }
 }
+
+
+interface ResourceDropdownProps {
+  options: ResourceSelection[]
+  anchorBlock: Slate.Block
+  onSelect: (templateId: string) => void
+}
+
+interface ResourceSelection {
+  id: string
+  label: string
+}
+
+class ResourceDropdown extends React.Component<ResourceDropdownProps> {
+  actionButton = (selectedTemplate: ResourceSelection) => (selection: ResourceSelection) => {
+    const isActive = selectedTemplate.id === selection.id;
+    return (
+      <MenuItem key={selection.id} eventKey={selection.id} active={isActive}
+        onSelect={this.onSelect as any}>
+        <span className={styles.dropdownMenuItem}>
+          <span>{selection.label}</span>
+        </span>
+      </MenuItem>
+    );
+  }
+
+  onSelect = (templateId: string, event: any) => {
+    event.preventDefault();
+    this.props.onSelect(templateId);
+  }
+
+  render() {
+    const { options, anchorBlock } = this.props;
+
+    // options can be undefined if templates are still loading
+    if (options) {
+      const selectedTemplateId = anchorBlock.data.get('attributes').template;
+      const selectedTemplate = options.find(o => o.id === selectedTemplateId);
+
+      if (selectedTemplate) {
+        return (
+          <Dropdown id='blocks' pullRight={true}>
+            <Dropdown.Toggle>
+              <span className={styles.dropdownMenuItem}>
+                {selectedTemplate.label}
+              </span>
+            </Dropdown.Toggle>
+            <Dropdown.Menu>
+              {options.map(this.actionButton(selectedTemplate))}
+            </Dropdown.Menu>
+          </Dropdown>
+        );
+      } else {
+        return null;
+      }
+    } else {
+      return null;
+    }
+  }
+}
+
 
 
 export interface BlockDropdownProps {

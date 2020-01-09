@@ -393,6 +393,7 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
                 value={this.state.value}
                 anchorBlock={this.state.anchorBlock}
                 editor={this.editorRef}
+                options={this.state.availableTemplates}
                 onDocumentSave={this.onDocumentSave}
               />
             }
@@ -445,7 +446,26 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
         marks: [],
       } as any]
     });
-    this.setState({ value: Slate.Value.fromJS(value), fileName, loading: false });
+
+    // load templates for embeds
+    Kefir.combine(
+      value.document.nodes
+           .filter(
+             n => n.object === 'block' && n.type === Block.embed
+           ).reduce(
+             (obj, n: Slate.BlockJSON) => {
+               const iri = n.data.attributes.src;
+               obj[iri] = this.findTemplatesForResource(Rdf.iri(iri));
+               return obj;
+             },
+             {}
+           ) as {string: Kefir.Property<any>}
+    ).onValue(
+      templates => this.setState({
+        value: Slate.Value.fromJS(value), fileName, loading: false,
+        availableTemplates: templates
+      })
+    );
   }
 
   private getFileManager(): FileManager {

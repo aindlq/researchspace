@@ -38,6 +38,7 @@ export interface Props {
   iiifServerUrl: string;
   width?: number | string;
   height?: number | string;
+  format?: string;
   preserveImageSize?: boolean;
 }
 
@@ -67,6 +68,7 @@ type ThumbnailRequest = {
   iiifServerUrl: string;
   width: number;
   height: number;
+  format?: string | 'auto';
 };
 
 const REGION_OVERLAY_MARGIN_FRACTION = 0.05;
@@ -110,7 +112,7 @@ class ImageThumbnailComponent extends Component<Props, State> {
   }
 
   private loadImageOrRegion(
-    {iri, imageIdPattern, iiifServerUrl, width, height}: ThumbnailRequest
+    {iri, imageIdPattern, iiifServerUrl, width, height, format}: ThumbnailRequest
   ): Kefir.Stream<LoadedThumbnail> {
     type QueryResult = {
       info: ImageOrRegionInfo;
@@ -126,7 +128,7 @@ class ImageThumbnailComponent extends Component<Props, State> {
     return queryResult.map(({info, bounds}) => {
       const requestParams: ImageApi.ImageRequestParams = {
         imageId: info.imageId,
-        format: 'jpg',
+        format: format || 'jpg',
       };
       const requestedRegion = (info.isRegion && info.boundingBox)
         ? computeDisplayedRegionWithMargin(
@@ -163,6 +165,7 @@ class ImageThumbnailComponent extends Component<Props, State> {
       iiifServerUrl: props.iiifServerUrl,
       width: this.props.width ? Number(this.props.width) : undefined,
       height: this.props.height ? Number(this.props.height) : undefined,
+      format: this.props.format,
     }));
   }
 
