@@ -1,6 +1,6 @@
 {{#each this}}
 
-<semantic-form new-subject-template="http://www.researchspace.org/entity/{{localName}}/\{{UUID}}"
+    <semantic-form new-subject-template="http://www.researchspace.org/entity/{{localName}}/{{{{raw}}}}\{{UUID}}{{{{/raw}}}}"
   fields='[[
   fieldDefinitions
     type="http://www.researchspace.org/instances/fields/EntityType"
