@@ -20,7 +20,7 @@ import {
   ClassAttributes, Component as ReactComponent, Children, cloneElement, createElement
 } from 'react';
 import * as Kefir from 'kefir';
-import { debounce } from 'lodash';
+import * as _ from 'lodash';
 import {
   Workspace,
   WorkspaceProps,
@@ -75,7 +75,9 @@ import {
   isSimpleClick,
 } from 'platform/api/navigation/components/ResourceLink';
 
-import { FieldDefinition, CompositeValue } from 'platform/components/forms';
+import {
+  FieldDefinition, CompositeValue, normalizeFieldDefinition
+} from 'platform/components/forms';
 import { CreateResourceDialog } from 'platform/components/ldp';
 import { addToDefaultSet } from 'platform/api/services/ldp-set';
 import { getOverlaySystem } from 'platform/components/ui/overlay';
@@ -350,6 +352,7 @@ export interface OntodiaProps extends OntodiaConfig, ClassAttributes<Ontodia> {
 }
 
 interface State {
+  readonly loading: boolean;
   readonly label?: string;
   readonly configurationError?: any;
   readonly diagramIri?: string;
@@ -473,7 +476,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
   private readonly cancellation = new Cancellation();
   private readonly listener = new EventObserver();
 
-  private allFields: ReadonlyArray<FieldDefinition>;
+  private allFields: Dictionary<FieldDefinition>;
   private forceFields: ReadonlyMap<string, FieldDefinition>;
   private entityMetadata: Map<ElementTypeIri, EntityMetadata>;
   private metadataApi: FieldBasedMetadataApi;
@@ -490,41 +493,10 @@ export class Ontodia extends Component<OntodiaProps, State> {
   constructor(props: OntodiaProps, context: any) {
     super(props, context);
 
-    let entityMetadata: Map<ElementTypeIri, EntityMetadata> | undefined;
-    let configurationError: unknown;
-    try {
-      entityMetadata = extractAuthoringMetadata(
-        Children.toArray(this.props.children).filter(isValidChild)
-      );
-    } catch (err) {
-      configurationError = err;
-    }
-
     this.state = {
       diagramIri: props.diagram,
-      configurationError,
+      loading: true,
     };
-
-    if (entityMetadata && entityMetadata.size > 0) {
-      const allFields = new Map<string, FieldDefinition>();
-      const forceFields = new Map<string, FieldDefinition>();
-      entityMetadata.forEach(metadata => {
-        metadata.fieldByIri.forEach(f => allFields.set(f.iri, f));
-        metadata.forceFields.forEach(f => forceFields.set(f.iri, f));
-      });
-
-      this.entityMetadata = entityMetadata;
-      this.allFields = Array.from(allFields.values());
-      this.forceFields = forceFields;
-
-      if (this.props.authoringMode) {
-        this.metadataApi = new FieldBasedMetadataApi(this.entityMetadata);
-        this.validationApi = new FieldBasedValidationApi(this.entityMetadata);
-      }
-    }
-
-    this.parsedMetadata = this.parseMetadata();
-    this.prepareElementTemplates();
   }
 
   componentDidUpdate(prevProps: OntodiaProps) {
@@ -535,7 +507,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
   }
 
   render() {
-    if (OntodiaExtension.isLoading()) {
+    if (this.state.loading || OntodiaExtension.isLoading()) {
       return createElement(Spinner, {});
     }
 
@@ -602,9 +574,55 @@ export class Ontodia extends Component<OntodiaProps, State> {
   }
 
   componentDidMount() {
-    OntodiaExtension.loadAndUpdate(this, this.cancellation);
+    fetch('/rs/kp/getAllKps')
+      .then(response => response.json())
+      .then(
+        response => {
+          return _.mapValues(response, normalizeFieldDefinition);
+        }
+      )
+      .then(
+        (allFields: Dictionary<FieldDefinition>) => {
+          this.allFields = allFields;
 
-    this.registerEventSources();
+          let entityMetadata: Map<ElementTypeIri, EntityMetadata> | undefined;
+          let configurationError: unknown;
+          try {
+            entityMetadata = extractAuthoringMetadata(
+              allFields,
+              Children.toArray(this.props.children).filter(isValidChild)
+            );
+          } catch (err) {
+            configurationError = err;
+          }
+          if (configurationError) {
+            this.setState({configurationError});
+          }
+
+          if (entityMetadata && entityMetadata.size > 0) {
+            const forceFields = new Map<string, FieldDefinition>();
+            entityMetadata.forEach(metadata => {
+              metadata.forceFields.forEach(f => forceFields.set(f.iri, f));
+            });
+
+            this.entityMetadata = entityMetadata;
+            this.forceFields = forceFields;
+
+            if (this.props.authoringMode) {
+              this.metadataApi = new FieldBasedMetadataApi(this.entityMetadata);
+              this.validationApi = new FieldBasedValidationApi(this.entityMetadata);
+            }
+          }
+
+          this.parsedMetadata = this.parseMetadata();
+          this.prepareElementTemplates();
+          this.setState({loading: false});
+
+          OntodiaExtension.loadAndUpdate(this, this.cancellation);
+          this.registerEventSources();
+
+        }
+      );
   }
 
   componentWillUnmount() {
@@ -718,7 +736,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
         options,
         repositories,
         createRDFStorage: provisionQuery !== undefined,
-        fields: this.allFields,
+        fields: _.values(this.allFields),
         settings: this.props.providerSettings,
         forceFields: this.forceFields,
       });
@@ -747,7 +765,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
     const model = this.workspace.getModel();
     const editor = this.workspace.getEditor();
 
-    const triggerEvent = debounce(() => {
+    const triggerEvent = _.debounce(() => {
       trigger({
         source: id,
         eventType: OntodiaEvents.DiagramChanged,
@@ -1012,7 +1030,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
 
     trigger({
       source: this.props.id,
-      eventType: OntodiaEvents.DiagramChanged,
+      eventType: OntodiaEvents.DataPersisted,
       data: {
         model: model,
         authoringState: editor.authoringState,

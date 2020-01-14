@@ -42,6 +42,16 @@ export interface OntodiaEventData {
     authoringState: OpaqueAuthoringState;
     temporaryState: OpaqueTemporaryState;
   };
+
+  /**
+   * Event which should be triggered when diagram data has been change persisted.
+   */
+  'Ontodia.DataPersisted': {
+    model: OpaqueDiagramModel;
+    authoringState: OpaqueAuthoringState;
+    temporaryState: OpaqueTemporaryState;
+  };
+
   /**
    * Event which should be triggered when diagram has been changed.
    */
@@ -110,6 +120,8 @@ const event: EventMaker<OntodiaEventData> = EventMaker;
 export const DiagramSaved = event('Ontodia.DiagramSaved');
 export const DiagramChanged = event('Ontodia.DiagramChanged');
 export const DiagramIsDirty = event('Ontodia.DiagramIsDirty');
+
+export const DataPersisted = event('Ontodia.DataPersisted');
 
 export const CreateElement = event('Ontodia.CreateElement');
 export const EditElement = event('Ontodia.EditElement');

@@ -100,6 +100,7 @@ public class KnowledgeMapConfigGenerator {
                 "    ?kp <http://www.metaphacts.com/ontology/fields#range> ?c . \n" +
                 "  }\n" +
                 "  ?class rdfs:subClassOf* ?c" +
+                "  FILTER (?class NOT IN (<http://www.researchspace.org/ontology/EX_Digital_Image>, <http://www.researchspace.org/ontology/EX_Digital_Image_Region>))" +
                 "}";
 
             List<Class> cs =
