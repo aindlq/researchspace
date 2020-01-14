@@ -373,11 +373,13 @@ export class DashboardComponent extends Component<Props, State> {
         children: [{
           id: 'thought-board',
           type: WorkspaceLayoutType.Component,
+          className: 'thinking-frames__clipboard-sidebar',
           content: React.Children.only(this.props.children) as React.ReactElement<any>,
           heading: 'Clipboard',
         }, {
           id: 'items',
           type: WorkspaceLayoutType.Component,
+          className: 'thinking-frames__frames-sidebar',
           content: <div className={styles.itemsContainer}>
             {this.renderItems()}
           </div> as React.ReactElement<any>,
@@ -399,6 +401,7 @@ export class DashboardComponent extends Component<Props, State> {
         children: items.map(item => ({
           id: item.id,
           type: WorkspaceLayoutType.Component,
+          className: 'thinking-frames__frames',
           content: this.renderView(item) as React.ReactElement<any>,
           heading: this.renderLabel(item),
           minSize: this.props.frameMinSize,
