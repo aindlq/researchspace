@@ -197,8 +197,8 @@ CONSTRUCT {
     _:fragmentSelector a oa:FragmentSelector ;
                        rdf:value ?boundingBox .
 } WHERE {
-  ?annotation a crmdig:D35_Area ;
-              rso:displayLabel ?label ;
+              ?annotation a rso:EX_Digital_Image_Region ;
+              (rso:displayLabel|rdfs:label) ?label ;
               crmdig:L49_is_primary_area_of ?img ;
               rdf:value ?svgValue .
 

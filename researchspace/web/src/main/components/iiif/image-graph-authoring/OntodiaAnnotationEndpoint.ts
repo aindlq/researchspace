@@ -190,7 +190,6 @@ function convertAnnotationToElementModel(
     id: annotation['@id'] as ElementIri,
     types: [
       rso.EX_Digital_Image_Region.value as ElementTypeIri,
-      crmdig.D35_Area.value as ElementTypeIri,
     ],
     label: {values: [{value: textResource.chars, language: ''}]},
     properties: {
@@ -212,6 +211,13 @@ function convertAnnotationToElementModel(
           value: annotation['http://www.researchspace.org/ontology/viewport'],
           language: '',
         }],
+      },
+      [fields.isPrimaryAreaOf]: {
+        type: 'uri',
+        values: annotation.on.map(
+          on =>
+            ({value: on.full, type: 'uri'})
+        ),
       }
     },
   };

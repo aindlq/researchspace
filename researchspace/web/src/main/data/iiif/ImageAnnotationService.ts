@@ -44,6 +44,12 @@ export interface ImageOrRegionInfo {
     imageIRI: Rdf.Iri;
 }
 
+export type ExplicitRegion = {
+  bbox?: string
+  svg?: string
+  viewport?: string
+};
+
 const IMAGE_REGION_INFO_QUERY = SparqlUtil.Sparql`
   prefix rso: <http://www.researchspace.org/ontology/>
   prefix crmdig: <http://www.ics.forth.gr/isl/CRMdig/>
@@ -64,14 +70,27 @@ const IMAGE_REGION_INFO_QUERY = SparqlUtil.Sparql`
     }
     FILTER(?__imageIdPattern__)
   }
-`;
+` as SparqlJs.SelectQuery;
+
+const INLINE_REGION_INFO_QUERY = SparqlUtil.Sparql`
+  prefix rso: <http://www.researchspace.org/ontology/>
+  prefix crmdig: <http://www.ics.forth.gr/isl/CRMdig/>
+
+  select ?type ?imageID ?area ?bbox ?viewport ?svg ?imageIRI {
+    BIND(?__iri__ as ?imageIRI) .
+    BIND("region" AS ?type)
+    FILTER(?__imageIdPattern__)
+  }
+` as SparqlJs.SelectQuery;
+
 
 export function queryIIIFImageOrRegion(
   imageOrRegion: Rdf.Iri,
   imageIdPattern: string,
-  repositories: Array<string>
+  repositories: Array<string>,
+  region?: ExplicitRegion
 ): Kefir.Property<ImageOrRegionInfo> {
-  return searchRepositoriesForImage(imageOrRegion, imageIdPattern, repositories)
+  return searchRepositoriesForImage(imageOrRegion, imageIdPattern, repositories, region)
     .flatMap(bindings => {
       const binding = bindings[0];
       const {type, imageIRI, imageID} = binding;
@@ -112,10 +131,13 @@ export function queryIIIFImageOrRegion(
 function searchRepositoriesForImage(
   imageOrRegion: Rdf.Iri,
   imageIdPattern: string,
-  repositories: Array<string>
+  repositories: Array<string>,
+  region?: ExplicitRegion
 ) {
   return Kefir.combine(
-    repositories.map(repository => getImageBindings(imageOrRegion, imageIdPattern, repository))
+    repositories.map(repository =>
+                     getImageBindings(imageOrRegion, imageIdPattern, repository, region)
+                    )
   ).flatMap(
     images => {
       const imageBindings = _.filter(images, bindigs => !SparqlUtil.isSelectResultEmpty(bindigs));
@@ -133,9 +155,26 @@ function searchRepositoriesForImage(
 function getImageBindings(
   imageOrRegion: Rdf.Iri,
   imageIdPattern: string,
-  repository: string
+  repository: string,
+  region?: ExplicitRegion
 ): Kefir.Property<SparqlClient.SparqlSelectResult> {
-  const query = cloneQuery(IMAGE_REGION_INFO_QUERY);
+  let query: SparqlJs.SelectQuery;
+  if (region) {
+    query =
+      SparqlClient.prepareParsedQuery(
+        [
+          {
+            'bbox': Rdf.literal(region.bbox),
+            'viewport': Rdf.literal(region.viewport),
+            'svg': Rdf.literal(region.svg),
+          },
+        ]
+      )(
+        cloneQuery(INLINE_REGION_INFO_QUERY)
+      );
+  } else {
+    query = cloneQuery(IMAGE_REGION_INFO_QUERY);
+  }
   let imageIdPatterns: SparqlJs.Pattern[];
   try {
     imageIdPatterns = SparqlUtil.parsePatterns(imageIdPattern, query.prefixes);

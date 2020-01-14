@@ -29,7 +29,7 @@ import { Component } from 'platform/api/components';
 
 import * as ImageApi from '../../data/iiif/ImageAPI';
 import {
-  queryIIIFImageOrRegion, ImageOrRegionInfo,
+  queryIIIFImageOrRegion, ImageOrRegionInfo, ExplicitRegion
 } from '../../data/iiif/ImageAnnotationService';
 
 export interface Props {
@@ -40,6 +40,13 @@ export interface Props {
   height?: number | string;
   format?: string;
   preserveImageSize?: boolean;
+
+  style?: React.CSSProperties;
+
+  // used when we want to render unsaved image region
+  bbox?: string
+  svg?: string
+  viewport?: string
 }
 
 export interface State {
@@ -69,6 +76,7 @@ type ThumbnailRequest = {
   width: number;
   height: number;
   format?: string | 'auto';
+  region?: ExplicitRegion
 };
 
 const REGION_OVERLAY_MARGIN_FRACTION = 0.05;
@@ -112,7 +120,7 @@ class ImageThumbnailComponent extends Component<Props, State> {
   }
 
   private loadImageOrRegion(
-    {iri, imageIdPattern, iiifServerUrl, width, height, format}: ThumbnailRequest
+    {iri, imageIdPattern, iiifServerUrl, width, height, format, region}: ThumbnailRequest
   ): Kefir.Stream<LoadedThumbnail> {
     type QueryResult = {
       info: ImageOrRegionInfo;
@@ -120,7 +128,7 @@ class ImageThumbnailComponent extends Component<Props, State> {
     };
     const repository =
       Maybe.fromNullable(this.context.semanticContext).map(c => c.repository).getOrElse('default');
-    const queryResult = queryIIIFImageOrRegion(iri, imageIdPattern, [repository])
+    const queryResult = queryIIIFImageOrRegion(iri, imageIdPattern, [repository], region)
       .flatMap<QueryResult>(info => ImageApi
         .queryImageBounds(iiifServerUrl, info.imageId)
         .map(bounds => ({info, bounds}))
@@ -159,6 +167,7 @@ class ImageThumbnailComponent extends Component<Props, State> {
   }
 
   requestThumbnail(props: Props) {
+    const { bbox, viewport, svg } = this.props;
     this.requests.plug(Kefir.constant({
       iri: Rdf.iri(props.imageOrRegion),
       imageIdPattern: props.imageIdPattern,
@@ -166,6 +175,7 @@ class ImageThumbnailComponent extends Component<Props, State> {
       width: this.props.width ? Number(this.props.width) : undefined,
       height: this.props.height ? Number(this.props.height) : undefined,
       format: this.props.format,
+      region: this.props.bbox ? {bbox, viewport, svg} : undefined
     }));
   }
 
@@ -176,12 +186,12 @@ class ImageThumbnailComponent extends Component<Props, State> {
   render() {
     const defaultSize = this.props.preserveImageSize ? undefined : '100%';
 
-    let {width, height} = this.props;
+    let {width, height, style} = this.props;
     if (width === undefined) { width = defaultSize; }
     if (height === undefined) { height = defaultSize; }
 
     return D.div(
-      {className: 'image-thumbnail', style: {width, height}},
+      {className: 'image-thumbnail', style: {width, height, ...style}},
       this.renderChild());
   }
 
