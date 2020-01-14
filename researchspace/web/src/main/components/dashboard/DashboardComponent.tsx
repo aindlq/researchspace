@@ -379,6 +379,7 @@ export class DashboardComponent extends Component<Props, State> {
         }, {
           id: 'items',
           type: WorkspaceLayoutType.Component,
+          defaultCollapsed: true,
           className: 'thinking-frames__frames-sidebar',
           content: <div className={styles.itemsContainer}>
             {this.renderItems()}

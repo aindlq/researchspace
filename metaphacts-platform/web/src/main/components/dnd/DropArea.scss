@@ -48,8 +48,7 @@
 }
 
 .dropArea:global(.set-management) {
-  flex: 1 1 auto;
-  overflow-y: auto;
+  height: 100%;
 }
 
 .dropArea:global(.mp-droppable-enabled) > .messageWrapper > .dropMessage {

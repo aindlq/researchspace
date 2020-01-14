@@ -42,6 +42,8 @@ import { TemplateParser, TemplateScope } from 'platform/api/services/template';
 import { ComponentProps } from 'platform/api/components';
 import { WrappingError } from 'platform/api/async';
 
+import { Reparentable } from 'platform/components/utils/Reparentable';
+
 import { hasComponent, loadComponent } from './ComponentsStore';
 import { safeReactCreateElement } from './ReactErrorCatcher';
 
@@ -333,7 +335,17 @@ function processReactComponent(
   } catch (error) {
     throw new WrappingError(`Invalid template markup at <${node.name}>`, error);
   }
-  return renderWebComponent(node.name, props, children, templateScope);
+
+  if ('clipboard' === attributes['fixedKey'] ) {
+    delete props.key;
+    return renderWebComponent(node.name, props, children, templateScope).then(el => {
+      return React.createElement(
+        Reparentable, {uid: attributes['fixedKey']}, el
+      );
+    });
+  } else {
+    return renderWebComponent(node.name, props, children, templateScope);
+  }
 }
 
 /**
