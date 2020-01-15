@@ -101,7 +101,7 @@ public class KnowledgeMapConfigGenerator {
                 "  }\n" +
                 "  ?class rdfs:subClassOf* ?c" +
                 "  FILTER (?class NOT IN (<http://www.researchspace.org/ontology/EX_Digital_Image>, <http://www.researchspace.org/ontology/EX_Digital_Image_Region>))" +
-                "}";
+                "} ORDER BY ?class";
 
             List<Class> cs =
                 QueryResults.asList(con.prepareTupleQuery(QueryLanguage.SPARQL, classesQuery).evaluate())
@@ -135,9 +135,9 @@ public class KnowledgeMapConfigGenerator {
             "SELECT DISTINCT ?kp ?datatype WHERE {\n" +
             "  <" + classIri + "> rdfs:subClassOf* ?class . \n" +
             "  ?kp <http://www.metaphacts.com/ontology/fields#domain> ?class. \n" +
-            "  FILTER(?kp NOT IN(<http://www.researchspace.org/instances/fields/EntityType>, <http://www.researchspace.org/instances/fields/EntityHasLabel>, <http://www.cidoc-crm.org/cidoc-crm/P138i_has_representation>, <http://www.researchspace.org/instances/fields/EntityhasConnection>)). \n" +
+            "  FILTER(?kp NOT IN(<http://www.researchspace.org/instances/fields/EntityType>, <http://www.researchspace.org/instances/fields/EntityHasLabel>, <http://www.cidoc-crm.org/cidoc-crm/P138i_has_representation>, <http://www.researchspace.org/instances/fields/EntityhasConnection>, <http://www.researchspace.org/instances/fields/EntityHasVideo>)). \n" +
             "  ?kp <http://www.metaphacts.com/ontology/fields#xsdDatatype> ?datatype . \n" +
-            "} ";
+            "} ORDER BY ?kp";
 
         TupleQuery tupleQuery = con.prepareTupleQuery(QueryLanguage.SPARQL, queryString);
         List<BindingSet> res = QueryResults.asList(tupleQuery.evaluate());

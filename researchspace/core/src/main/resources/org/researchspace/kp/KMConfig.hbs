@@ -8,7 +8,8 @@
     "http://www.researchspace.org/instances/fields/EntityType",
     "http://www.researchspace.org/instances/fields/EntityHasLabel",
     "http://www.cidoc-crm.org/cidoc-crm/P138i_has_representation",
-    "http://www.researchspace.org/instances/fields/EntityhasConnection"
+    "http://www.researchspace.org/instances/fields/EntityhasConnection",
+    "http://www.researchspace.org/instances/fields/EntityHasVideo"
   ]'>
 
   <ontodia-entity-metadata
@@ -16,10 +17,12 @@
     type-iri='http://www.researchspace.org/instances/fields/EntityType'
     label-iri='http://www.researchspace.org/instances/fields/EntityHasLabel'
     image-iri='http://www.cidoc-crm.org/cidoc-crm/P138i_has_representation'
+    force-iris='["http://www.researchspace.org/instances/fields/EntityHasVideo"]'
   ></ontodia-entity-metadata>
 
   <semantic-form-text-input for="http://www.researchspace.org/instances/fields/EntityHasLabel"></semantic-form-text-input>
   <semantic-form-text-input for="http://www.cidoc-crm.org/cidoc-crm/P138i_has_representation"></semantic-form-text-input>
+  <semantic-form-text-input for="http://www.researchspace.org/instances/fields/EntityHasVideo"></semantic-form-text-input>
 
   {{#each kps}}
     {{#if isDatatypeProperty}}
