@@ -84,6 +84,12 @@ export interface BaseSplitPaneConfig {
    * Defined which pane will be used as a sidebar.
    */
   primary?: 'first' | 'second';
+
+  /**
+   * Render opned pane even when it is in closed state
+   * @default false
+   */
+  alwaysRender?: boolean;
 }
 
 export interface SplitPaneConfigWithDock extends BaseSplitPaneConfig {
@@ -104,3 +110,5 @@ export function configHasDock(
 ): config is SplitPaneConfigWithDock {
   return has(config, 'dock') && config.dock === true;
 }
+
+export const OpenPaneEvent = 'SplitPane.Open';
