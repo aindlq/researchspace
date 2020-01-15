@@ -110,7 +110,12 @@ export class PageViewerComponent extends Component<Props, State> {
       BaseSemanticContextProvider,
       {repository: getCurrentRepository()},
       D.div(
-        {id: 'template-content'},
+        {
+          id: 'template-content',
+
+          // @ts-ignore
+          'data-page-iri': this.props.iri.value,
+        },
         this.state.loading && !this.props.noBackdrop ? createElement(LoadingBackdrop) : null,
         this.state.pageContent
       )
