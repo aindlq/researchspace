@@ -17,8 +17,11 @@
  */
 
 import * as React from 'react';
-import { uniqueId } from 'lodash';
+import { uniqueId, isEmpty } from 'lodash';
 import { WorkspaceLayout, WorkspaceLayoutNode, WorkspaceLayoutType } from 'ontodia';
+
+import { Cancellation } from 'platform/api/async';
+import { listen } from 'platform/api/events';
 
 import { Component } from 'platform/api/components';
 import { TemplateItem } from 'platform/components/ui/template';
@@ -26,6 +29,7 @@ import { getOverlaySystem } from 'platform/components/ui/overlay';
 import { ConfirmationDialog } from 'platform/components/ui/confirmation-dialog';
 
 import { DashboardItem, DashboardViewConfig } from './DashboardItem';
+import { AddFrameEvent, AddFrameEventData } from './DashboardEvents';
 
 import * as styles from './Dashboard.scss';
 
@@ -82,6 +86,11 @@ export interface DashboardLinkedViewConfig {
 
 export interface Props {
   /**
+   * Used when dashboard is used as a target for events.
+   */
+  id: string;
+
+  /**
    * Defines possible visualizations of resources
    */
   views: ReadonlyArray<DashboardViewConfig>;
@@ -113,6 +122,8 @@ export class DashboardComponent extends Component<Props, State> {
     linkedViews: [],
   };
 
+  private readonly cancellation = new Cancellation();
+
   constructor(props: Props, context: any) {
     super(props, context);
 
@@ -129,10 +140,29 @@ export class DashboardComponent extends Component<Props, State> {
     };
   }
 
-  private onAddNewItem = () => {
+  componentDidMount() {
+    this.cancellation.map(
+      listen({
+        eventType: AddFrameEvent,
+        target: this.props.id,
+      })
+    ).observe({
+      value: ({data}) => {
+        this.onAddNewItem({
+          ...Item.emptyItem(),
+          ...data as AddFrameEventData,
+        });
+      }
+    });
+  }
+
+  componentWillUnmount() {
+    this.cancellation.cancelAll();
+  }
+
+  private onAddNewItem = (item: Item = Item.emptyItem()) => {
     this.setState((prevState): State => {
       const newItems = [...prevState.items];
-      const item = Item.emptyItem();
       newItems.push(item);
       return {items: newItems};
     });
@@ -173,6 +203,10 @@ export class DashboardComponent extends Component<Props, State> {
             options: {iri: item.resourceIri, dashboardId: item.id},
           }} />
         </span>
+        <button className={`btn btn-link btn-xs pull-right ${styles.deleteItemButton}`}
+          onClick={() => this.onRemoveItem(item)}>
+          <i className='fa fa-times text-danger'/>
+        </button>
       </span>;
     }
 
@@ -194,9 +228,14 @@ export class DashboardComponent extends Component<Props, State> {
 
   private removeItem(itemId: string) {
     this.setState((prevState): State => {
-      const newItems = [...prevState.items];
+      let newItems = [...prevState.items];
       const index = newItems.findIndex(item => item.id === itemId);
       newItems.splice(index, 1);
+
+      // make sure that we always have at least one frame
+      if (isEmpty(newItems)) {
+        newItems = [Item.emptyItem()];
+      }
       return {items: newItems};
     });
   }
@@ -256,10 +295,6 @@ export class DashboardComponent extends Component<Props, State> {
               </button>
             ) : null}
             {this.renderLabel(item)}
-            <button className={`btn btn-link btn-xs ${styles.deleteItemButton}`}
-              onClick={() => this.onRemoveItem(item)}>
-              <i className='fa fa-times text-danger'/>
-            </button>
           </div>
           {body && item.isExpanded ? body : null}
         </div>;

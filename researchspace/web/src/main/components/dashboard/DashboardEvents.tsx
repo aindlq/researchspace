@@ -31,7 +31,19 @@ export interface DashboardEvents {
     resourceIri: string;
     data?: { [key: string]: any }; // additional info that can be passed with the event
   };
-}
+
+ }
+
+
+/**
+ * Can be triggered to initiate new frame
+ */
+export const AddFrameEvent = 'Dashboard.AddFrame';
+export type AddFrameEventData = {
+  resourceIri?: string
+  viewId?: string
+};
+
 const event: EventMaker<DashboardEvents> = EventMaker;
 
 export const StatusChanged = event('Dashboard.StatusChanged');
