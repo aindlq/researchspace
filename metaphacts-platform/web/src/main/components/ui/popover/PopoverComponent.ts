@@ -68,7 +68,7 @@ export class PopoverComponentClass extends Component<Props, {}> {
         placement: placement,
         rootClose: rootClose || true,
       },
-      cloneElement(triggerChildren, {})
+      cloneElement(triggerChildren, {onClick: (event) => event.stopPropagation() })
     );
   }
 }

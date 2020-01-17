@@ -86,6 +86,10 @@ export class ClearableInput extends React.Component<ClearableInputProps, State> 
     </div>;
   }
 
+  public focus() {
+    this.input.focus();
+  }
+
   private onInputMount = (input: HTMLInputElement) => {
     this.input = input;
   }

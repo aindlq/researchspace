@@ -77,16 +77,12 @@ export class FieldBasedMetadataApi implements MetadataApi {
     source: ElementModel, target: ElementModel, ct: CancellationToken
   ): Promise<Array<{ linkTypeIri: LinkTypeIri, direction: LinkDirection }>> {
 
-    return Promise.all([
-      this.getPossibleLinkTypes(source, target, ct),
-      this.getPossibleLinkTypes(target, source, ct),
-    ]).then(([outgoingPossibleLinks, incomingPossibleLinks]) => {
-      return outgoingPossibleLinks.map(linkTypeIri => ({
-        linkTypeIri, direction: LinkDirection.out,
-      })).concat(incomingPossibleLinks.map(linkTypeIri => ({
-        linkTypeIri, direction: LinkDirection.in,
-      })));
-    });
+    return this.getPossibleLinkTypes(source, target, ct)
+      .then(outgoingPossibleLinks => {
+        return outgoingPossibleLinks.map(linkTypeIri => ({
+          linkTypeIri, direction: LinkDirection.out,
+        }));
+      });
   }
 
   private getPossibleLinkTypes(

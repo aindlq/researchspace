@@ -175,9 +175,9 @@ export function nodesFromQueryResult(result: SparqlClient.SparqlSelectResult): N
 
     const nodeLabel = (label && label.isLiteral()) ? label : undefined;
 
-    return hasChildren && hasChildren.value === 'false'
-      ? {iri: item, label: nodeLabel, children: [], reachedLimit: true}
-      : {iri: item, label: nodeLabel, reachedLimit: false};
+    return hasChildren && hasChildren.value === 'true'
+      ? {iri: item, label: nodeLabel, reachedLimit: false}
+      : {iri: item, label: nodeLabel, children: [], reachedLimit: true};
   }).filter(node => node !== undefined);
 }
 

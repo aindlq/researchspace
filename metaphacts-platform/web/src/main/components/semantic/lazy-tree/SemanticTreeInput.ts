@@ -37,6 +37,7 @@ import { ErrorNotification } from 'platform/components/ui/notification';
 import { ClearableInput, ClearableInputProps, RemovableBadge } from 'platform/components/ui/inputs';
 import { Spinner } from 'platform/components/ui/spinner';
 import { Droppable } from 'platform/components/dnd';
+import { TemplateItem } from 'platform/components/ui/template';
 
 import { KeyedForest, KeyPath } from './KeyedForest';
 import { TreeSelection, SelectionNode } from './TreeSelection';
@@ -102,6 +103,10 @@ export interface SemanticTreeInputProps extends ComplexTreePatterns {
   openDropdownOnFocus?: boolean;
   /** Allow forced search with query less than MIN_SEARCH_TERM_LENGTH by pressing Enter **/
   allowForceSuggestion?: boolean;
+
+  selectOnClick?: boolean;
+  additionalItemTemplate?: string;
+  disabled?: boolean;
 }
 
 const ITEMS_LIMIT = 200;
@@ -237,6 +242,10 @@ export class SemanticTreeInput extends Component<SemanticTreeInputProps, State> 
     if (!sameQueries) {
       this.setState(this.createQueryModel(nextProps));
     }
+
+    if (props.initialSelection !== nextProps.initialSelection) {
+      this.setInitialSelection();
+    }
   }
 
   private createQueryModel(props: SemanticTreeInputProps): State {
@@ -346,6 +355,7 @@ export class SemanticTreeInput extends Component<SemanticTreeInputProps, State> 
 
   private renderTextField() {
     const textFieldProps: ClearableInputProps & ReactProps<ClearableInput> = {
+      disabled: this.props.disabled,
       ref: input => this.textInput = input,
       className: styles.textInput,
       inputClassName: styles.input,
@@ -358,7 +368,7 @@ export class SemanticTreeInput extends Component<SemanticTreeInputProps, State> 
       }),
       onBlur: () => {
         this.setState({searchInputFocused: false});
-        if (!this.state.searchText && this.props.openDropdownOnFocus) {
+        if (!this.state.searchText && !this.props.openDropdownOnFocus) {
           this.closeDropdown({saveSelection: false});
         }
       },
@@ -390,6 +400,7 @@ export class SemanticTreeInput extends Component<SemanticTreeInputProps, State> 
             if (this.props.onSelectionChanged) {
               this.props.onSelectionChanged(newSelection);
             }
+            this.textInput.focus();
           });
         },
       }, item.label.value)
@@ -461,6 +472,7 @@ export class SemanticTreeInput extends Component<SemanticTreeInputProps, State> 
         {
           className: styles.browseButton,
           active: this.state.mode.type === 'full',
+          disabled: this.props.disabled,
           onClick: () => {
             const modeType = this.state.mode.type;
             if (modeType === 'collapsed' || modeType === 'search') {
@@ -632,6 +644,11 @@ export class SemanticTreeInput extends Component<SemanticTreeInputProps, State> 
           if (state.mode.type === 'collapsed') { return {}; }
           return {mode: {type: state.mode.type, selection}};
         });
+
+        if (this.props.selectOnClick && this.props.onSelectionChanged) {
+          this.props.onSelectionChanged(selection);
+          this.closeDropdown({saveSelection: true});
+        }
       },
       isExpanded: node => node.expanded,
       onExpandedOrCollapsed: (item, expanded) => {
@@ -662,10 +679,25 @@ export class SemanticTreeInput extends Component<SemanticTreeInputProps, State> 
       }
     }
 
-    return D.span({
-      title: node.iri.value,
-      className: node.error ? styles.error : undefined,
-    }, ...parts);
+    return D.span(
+      {
+        title: node.iri.value,
+        className: node.error ? styles.error : undefined,
+      },
+      ...parts,
+      this.props.additionalItemTemplate ? createElement(
+        TemplateItem,
+        {
+          key: node.iri.value + 'additional-item-template',
+          template: {
+            source: this.props.additionalItemTemplate,
+            options: {
+              iri: node.iri.value
+            }
+          }
+        }
+      ) : null
+    );
   }
 
   private requestChildren(path: KeyPath, isSearching: boolean) {
@@ -688,7 +720,7 @@ export class SemanticTreeInput extends Component<SemanticTreeInputProps, State> 
     const leafs = searchResult.map(
       ({item, score = Rdf.literal('0'), label, hasChildren}): Node => {
         if (!(item.isIri() && label.isLiteral())) { return undefined; }
-        const certainlyLeaf = hasChildren.isLiteral() && hasChildren.value === 'false';
+        const certainlyLeaf = hasChildren ? hasChildren.isLiteral() && hasChildren.value !== 'true' : true;
         return {
           iri: item,
           label: label,

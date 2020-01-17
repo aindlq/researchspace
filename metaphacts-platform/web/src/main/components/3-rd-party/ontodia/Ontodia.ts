@@ -21,6 +21,8 @@ import {
 } from 'react';
 import * as Kefir from 'kefir';
 import * as _ from 'lodash';
+import * as SparqlJs from 'sparqljs';
+
 import {
   Workspace,
   WorkspaceProps,
@@ -42,6 +44,7 @@ import {
   ElementIri,
   ElementTypeIri,
   PropertyEditorOptions,
+  LinkSelectorOptions,
   PropertySuggestionParams,
   PropertyScore,
   AuthoringState,
@@ -59,6 +62,7 @@ import {
   LocalizedString,
   LinkModel,
   LinkTypeIri,
+  ClassSelectorOptions,
 } from 'ontodia';
 import * as URI from 'urijs';
 
@@ -88,6 +92,7 @@ import { isValidChild, universalChildren } from 'platform/components/utils';
 import { getPreferredUserLanguage, selectPreferredLabel } from 'platform/api/services/language';
 import { ConfigHolder } from 'platform/api/services/config-holder';
 import { getLabels } from 'platform/api/services/resource-label';
+import { SemanticTreeInput, TreeSelection } from 'platform/components/semantic/lazy-tree';
 
 import { OntodiaExtension, OntodiaFactory } from './extensions';
 
@@ -112,6 +117,8 @@ import {
 import { FormBasedPersistence, FormBasedPersistenceProps } from './authoring/FormBasedPersistence';
 
 import * as OntodiaEvents from './OntodiaEvents';
+import { SparqlClient, SparqlUtil } from 'platform/api/sparql';
+import { Sparql } from 'platform/api/sparql/SparqlUtil';
 
 export interface EdgeStyle {
   markerSource?: LinkMarkerStyle,
@@ -343,6 +350,8 @@ export interface OntodiaConfig {
    * If true right panel is initially open.
    */
   rightPanelInitiallyOpen?: boolean;
+
+  additionalTreeItemTemplate?: string;
 }
 
 export type OntodiaPersistenceMode = FormBasedPersistenceProps | OntologyPersistenceProps;
@@ -569,6 +578,8 @@ export class Ontodia extends Component<OntodiaProps, State> {
       linkTemplateResolver: this.resolveLinkTemplate,
       selectLabelLanguage,
       propertyEditor: this.renderPropertyEditor,
+      linkSelector: this.renderLinkSelector,
+      classSelector: this.renderClassSelector,
     };
     return createWorkspace(this.props, props);
   }
@@ -1394,6 +1405,340 @@ export class Ontodia extends Component<OntodiaProps, State> {
     }
     return undefined;
   }
+
+  private static ROOTS_LINKS_QUERY = Sparql`
+SELECT distinct ?item ?label ?hasChildren where {
+  OPTIONAL {
+    ?item rdfs:subPropertyOf ?superProperty .
+  }
+  FILTER(!BOUND(?superProperty))
+
+  OPTIONAL {
+?other rdfs:subPropertyOf ?item. 
+BIND(true AS ?hasChildren)
+
+  }
+
+  OPTIONAL {
+    ?item rdfs:label ?engLabel .
+    FILTER(LANG(?engLabel) = "en")
+  }
+  OPTIONAL {
+    ?item rdfs:label ?noLangLabel .
+    FILTER(LANG(?noLangLabel) = "")
+  }
+  BIND(COALESCE(?engLabel, ?noLangLabel, REPLACE(STR(?item), "^.*/(.*)$", "$1")) AS ?label) .
+BIND(REPLACE(STR(?parent), "^.*/P(\\d*).*$", "$1") AS ?maybePNumber)
+  BIND(IF(?maybePNumber = STR(?item), 999, STRDT(?maybePNumber, xsd:integer)) as ?pNumber)
+} order by ASC(?pNumber)  DESC(?hasChildren)  ?label
+` as SparqlJs.SelectQuery ;
+
+  private static CHILDREN_LINKS_QUERY = Sparql`
+select distinct ?item ?label ?hasChildren where {
+  ?item rdfs:subPropertyOf ?parent .
+
+  OPTIONAL {
+?other rdfs:subPropertyOf ?item.
+BIND(true AS ?hasChildren)
+  }
+
+  OPTIONAL {
+    ?item rdfs:label ?engLabel .
+   FILTER(LANG(?engLabel) = "en")
+  }
+  OPTIONAL {
+    ?item rdfs:label ?noLangLabel .
+    FILTER(LANG(?noLangLabel) = "")
+  }
+  BIND(COALESCE(?engLabel, ?noLangLabel, REPLACE(STR(?item), "^.*/(.*)$", "$1")) AS ?label) .
+
+BIND(REPLACE(STR(?parent), "^.*/P(\\d*).*$", "$1") AS ?maybePNumber)
+  BIND(IF(?maybePNumber = STR(?item), 999, STRDT(?maybePNumber, xsd:integer)) as ?pNumber)
+} order by ASC(?pNumber)  DESC(?hasChildren)  ?label
+` as SparqlJs.SelectQuery;
+
+  private static SEARCH_LINKS_QUERY = Sparql`
+select distinct ?item ?label ?hasChildren ?score where {
+OPTIONAL {
+?other rdfs:subPropertyOf ?item.
+BIND(true AS ?hasChildren)
+}
+
+OPTIONAL {
+?item rdfs:label ?engLabel .
+FILTER(LANG(?engLabel) = "en")
+}
+OPTIONAL {
+?item rdfs:label ?noLangLabel .
+FILTER(LANG(?noLangLabel) = "")
+}
+BIND(COALESCE(?engLabel, ?noLangLabel, REPLACE(STR(?item), "^.*/(.*)$", "$1")) AS ?label) .
+FILTER REGEX(STR(?label), ?__token__, "i")
+
+BIND(REPLACE(STR(?parent), "^.*/P(\\d*).*$", "$1") AS ?maybePNumber)
+BIND(IF(?maybePNumber = STR(?item), 999, STRDT(?maybePNumber, xsd:integer)) as ?pNumber)
+} order by ?score ASC(?pNumber)  DESC(?hasChildren)  ?label LIMIT 100
+` as SparqlJs.SelectQuery;
+
+  private static PARENTS_LINKS_QUERY = Sparql`
+select distinct ?item ?parentLabel ?parent where {
+?item rdfs:subPropertyOf ?parent .
+
+OPTIONAL {
+?parent rdfs:label ?engLabel .
+FILTER(LANG(?engLabel) = "en")
+}
+OPTIONAL {
+?parent rdfs:label ?noLangLabel .
+FILTER(LANG(?noLangLabel) = "")
+}
+BIND(COALESCE(?engLabel, ?noLangLabel, REPLACE(STR(?parent), "^.*/(.*)$", "$1")) AS ?parentLabel) .
+} ORDER BY ?parent
+` as SparqlJs.SelectQuery;
+
+
+  private renderLinkSelector = (options: LinkSelectorOptions) => {
+    const links = options.values.map(link => ({item: Rdf.iri(link.id)}));
+
+    // ugly hack to check in the query if hasChlidren is in the same list
+    const other = options.values.map(link => ({other: Rdf.iri(link.id)}));
+    const initialSelection = options.value ? [Rdf.iri(options.value.id)] : [];
+
+    const rootsQuery =
+      SparqlUtil.serializeQuery(
+        SparqlClient.prepareParsedQuery(
+          links
+        )(
+          SparqlClient.prepareParsedQuery(
+            other
+          )(
+            Ontodia.ROOTS_LINKS_QUERY
+          )
+        )
+      );
+
+    const childrenQuery =
+      SparqlUtil.serializeQuery(
+        SparqlClient.prepareParsedQuery(
+          links
+        )(
+          SparqlClient.prepareParsedQuery(
+            other
+          )(
+            Ontodia.CHILDREN_LINKS_QUERY
+          )
+        )
+      );
+
+    const searchQuery =
+      SparqlUtil.serializeQuery(
+        SparqlClient.prepareParsedQuery(
+          links
+        )(
+          SparqlClient.prepareParsedQuery(
+            other
+          )(
+            Ontodia.SEARCH_LINKS_QUERY
+          )
+        )
+      );
+
+    const parentsQuery =
+      SparqlUtil.serializeQuery(
+        Ontodia.PARENTS_LINKS_QUERY
+      );
+
+    return createElement(
+      SemanticTreeInput,
+      {
+        key: options.value ? options.value.id : 'empty',
+        rootsQuery,
+        childrenQuery,
+        parentsQuery,
+        searchQuery,
+        selectOnClick: true,
+        openDropdownOnFocus: true,
+        disabled: options.disabled,
+        initialSelection,
+        onSelectionChanged: (selection) => {
+          const iri = TreeSelection.leafs(selection).first()?.iri?.value;
+          if (iri) {
+            options.onChange(
+              options.values.find(link => link.id === iri)
+            );
+          }
+        },
+        additionalItemTemplate: this.props.additionalTreeItemTemplate,
+      }
+    );
+  }
+
+  private static ROOTS_CLASS_QUERY = Sparql`
+SELECT distinct ?item ?label ?hasChildren where {
+OPTIONAL { ?item rdfs:subClassOf ?superClass. }
+FILTER(!BOUND(?superClass))
+OPTIONAL {
+?other rdfs:subClassOf ?item.
+BIND("true"^^xsd:boolean AS ?hasChildren)
+}
+
+  OPTIONAL {
+    ?item rdfs:label ?engLabel .
+    FILTER(LANG(?engLabel) = "en")
+  }
+  OPTIONAL {
+    ?item rdfs:label ?noLangLabel .
+    FILTER(LANG(?noLangLabel) = "")
+  }
+  BIND(COALESCE(?engLabel, ?noLangLabel, REPLACE(STR(?item), "^.*/(.*)$", "$1")) AS ?label) .
+
+BIND(REPLACE(STR(?item), "^http://www.cidoc-crm.org/cidoc-crm/E(\\d*).*$", "$1") AS ?maybePNumber)
+  BIND(IF(?maybePNumber = STR(?item), 999, STRDT(?maybePNumber, xsd:integer)) as ?pNumber)
+} order by ASC(?pNumber)  DESC(?hasChildren)  ?label
+` as SparqlJs.SelectQuery ;
+
+  private static CHILDREN_CLASS_QUERY = Sparql`
+select distinct ?item ?label ?hasChildren where {
+  ?item rdfs:subClassOf ?parent .
+
+  OPTIONAL {
+?other rdfs:subClassOf ?item.
+BIND(true AS ?hasChildren)
+  }
+
+  OPTIONAL {
+    ?item rdfs:label ?engLabel .
+   FILTER(LANG(?engLabel) = "en")
+  }
+  OPTIONAL {
+    ?item rdfs:label ?noLangLabel .
+    FILTER(LANG(?noLangLabel) = "")
+  }
+  BIND(COALESCE(?engLabel, ?noLangLabel, REPLACE(STR(?item), "^.*/(.*)$", "$1")) AS ?label) .
+
+BIND(REPLACE(STR(?item), "^http://www.cidoc-crm.org/cidoc-crm/E(\\d*).*$", "$1") AS ?maybePNumber)
+  BIND(IF(?maybePNumber = STR(?item), 999, STRDT(?maybePNumber, xsd:integer)) as ?pNumber)
+} order by ASC(?pNumber)  DESC(?hasChildren)  ?label
+` as SparqlJs.SelectQuery;
+
+  private static SEARCH_CLASS_QUERY = Sparql`
+select distinct ?item ?label ?hasChildren ?score where {
+OPTIONAL {
+?other rdfs:subClassOf ?item.
+BIND(true AS ?hasChildren)
+}
+
+OPTIONAL {
+?item rdfs:label ?engLabel .
+FILTER(LANG(?engLabel) = "en")
+}
+OPTIONAL {
+?item rdfs:label ?noLangLabel .
+FILTER(LANG(?noLangLabel) = "")
+}
+BIND(COALESCE(?engLabel, ?noLangLabel, REPLACE(STR(?item), "^.*/(.*)$", "$1")) AS ?label) .
+FILTER REGEX(STR(?label), ?__token__, "i")
+
+BIND(REPLACE(STR(?item), "^http://www.cidoc-crm.org/cidoc-crm/E(\\d*).*$", "$1") AS ?maybePNumber)
+BIND(IF(?maybePNumber = STR(?item), 999, STRDT(?maybePNumber, xsd:integer)) as ?pNumber)
+} order by ?score ASC(?pNumber)  DESC(?hasChildren)  ?label LIMIT 100
+` as SparqlJs.SelectQuery;
+
+  private static PARENTS_CLASS_QUERY = Sparql`
+select distinct ?item ?parentLabel ?parent where {
+?item rdfs:subClassOf ?parent .
+
+OPTIONAL {
+?parent rdfs:label ?engLabel .
+FILTER(LANG(?engLabel) = "en")
+}
+OPTIONAL {
+?parent rdfs:label ?noLangLabel .
+FILTER(LANG(?noLangLabel) = "")
+}
+BIND(COALESCE(?engLabel, ?noLangLabel, REPLACE(STR(?parent), "^.*/(.*)$", "$1")) AS ?parentLabel) .
+
+BIND(REPLACE(STR(?item), "^http://www.cidoc-crm.org/cidoc-crm/E(\\d*).*$", "$1") AS ?maybePNumber)
+BIND(IF(?maybePNumber = STR(?parent), 999, STRDT(?maybePNumber, xsd:integer)) as ?pNumber)
+} ORDER BY ?parent
+` as SparqlJs.SelectQuery;
+
+
+  private renderClassSelector = (options: ClassSelectorOptions) => {
+    const links = options.values.map(c => ({item: Rdf.iri(c)}));
+
+    // ugly hack to check in the query if hasChlidren is in the same list
+    const other = options.values.map(c => ({other: Rdf.iri(c)}));
+    const initialSelection = options.value !== 'http://ontodia.org/NewEntity' ? [Rdf.iri(options.value)] : [];
+
+    const rootsQuery =
+      SparqlUtil.serializeQuery(
+        SparqlClient.prepareParsedQuery(
+          links
+        )(
+          SparqlClient.prepareParsedQuery(
+            other
+          )(
+            Ontodia.ROOTS_CLASS_QUERY
+          )
+        )
+      );
+
+    const childrenQuery =
+      SparqlUtil.serializeQuery(
+        SparqlClient.prepareParsedQuery(
+          links
+        )(
+          SparqlClient.prepareParsedQuery(
+            other
+          )(
+            Ontodia.CHILDREN_CLASS_QUERY
+          )
+        )
+      );
+
+    const searchQuery =
+      SparqlUtil.serializeQuery(
+        SparqlClient.prepareParsedQuery(
+          links
+        )(
+          SparqlClient.prepareParsedQuery(
+            other
+          )(
+            Ontodia.SEARCH_CLASS_QUERY
+          )
+        )
+      );
+
+    const parentsQuery =
+      SparqlUtil.serializeQuery(
+        Ontodia.PARENTS_CLASS_QUERY
+      );
+
+    return createElement(
+      SemanticTreeInput,
+      {
+        key: options.value !== 'http://ontodia.org/NewEntity' ? options.value : 'empty',
+        initialSelection,
+        rootsQuery,
+        childrenQuery,
+        parentsQuery,
+        searchQuery,
+        selectOnClick: true,
+        openDropdownOnFocus: true,
+        onSelectionChanged: (selection) => {
+          const iri = TreeSelection.leafs(selection).first()?.iri?.value;
+          if (iri) {
+            options.onChange(
+              options.values.find(link => link === iri)
+            );
+          }
+        },
+        additionalItemTemplate: this.props.additionalTreeItemTemplate,
+      }
+    );
+  }
+
 }
 
 function makePersistenceFromConfig(mode: OntodiaPersistenceMode = {type: 'form'}) {
