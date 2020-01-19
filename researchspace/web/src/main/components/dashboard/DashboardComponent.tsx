@@ -210,8 +210,13 @@ export class DashboardComponent extends Component<Props, State> {
       </span>;
     }
 
+
     return <span className={`${styles.itemLabel} ${focusedClassName} ${dirtyClassName}`}>
       Frame {item.index}
+      <button className={`btn btn-link btn-xs pull-right ${styles.deleteItemButton}`}
+        onClick={() => this.onRemoveItem(item)}>
+        <i className='fa fa-times text-danger'/>
+      </button>
     </span>;
   }
 
