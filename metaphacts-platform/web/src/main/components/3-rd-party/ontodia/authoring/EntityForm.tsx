@@ -152,7 +152,7 @@ export class EntityForm extends Component<EntityFormProps, State> {
     const {model, suggestIri} = this.state;
     return (
         <div className='semantic-form-input-decorator semantic-form-input-decorator--with-header'>
-            <div style={{display: 'flex'}}>
+            <div>
               <label style={{marginLeft: -12}}>IRI</label>
               <label style={{marginLeft: 5, opacity: 0.8}}>
                 (Suggest IRI
