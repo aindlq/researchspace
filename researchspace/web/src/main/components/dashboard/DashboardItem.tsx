@@ -275,7 +275,7 @@ export class DashboardItem extends Component<DashboardItemProps, State> {
             } else if (view.iconClass) {
               image = <span className={`${view.iconClass} ${styles.icon}`} />;
             }
-            return <Col key={view.id} md={4} xs={4} lg={4} sm={4}>
+            return <Col key={view.id} md={4} xs={12} lg={4} sm={6}>
               <div className={styles.defaultColumnItem}>
                 {this.renderDefaultDropArea(view, image)}
               </div>
