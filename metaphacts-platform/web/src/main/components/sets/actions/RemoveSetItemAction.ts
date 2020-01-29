@@ -18,10 +18,16 @@
 
 import { Component, Children, ReactElement, cloneElement } from 'react';
 
+import { Rdf } from 'platform/api/rdf';
+
 import {
   SetManagementContextTypes, SetManagementContext,
   SetViewContext, SetViewContextTypes, SetItemViewContext, SetItemViewContextTypes,
 } from '../SetManagementApi';
+
+interface Props {
+  item?: string;
+}
 
 /**
  * Removes item from the active set.
@@ -30,16 +36,20 @@ import {
  *
  * @example <mp-set-management-action-remove-set-item></mp-set-management-action-remove-set-item>
  */
-export class RemoveSetItemAction extends Component<{}, {}> {
+export class RemoveSetItemAction extends Component<Props, {}> {
   public static contextTypes =
     {...SetManagementContextTypes, ...SetViewContextTypes, ...SetItemViewContextTypes};
   context: SetManagementContext & SetViewContext & SetItemViewContext;
 
-  private onClick = () =>
+  private onClick = () => {
+    const { item } = this.props;
+    const root = item ? undefined : this.context['mp-set-management--set-view'].getCurrentSet();
+    const element =
+      item ? Rdf.iri(item) : this.context['mp-set-management--set-item-view'].getItem();
     this.context['mp-set-management'].removeSetItem(
-      this.context['mp-set-management--set-view'].getCurrentSet(),
-      this.context['mp-set-management--set-item-view'].getItem()
-    )
+      root, element
+    );
+  }
 
   public render() {
     const child = Children.only(this.props.children) as ReactElement<any>;

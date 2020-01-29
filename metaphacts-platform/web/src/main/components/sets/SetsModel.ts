@@ -32,6 +32,7 @@ import * as Defaults from './Defaults';
 
 export interface PlatformSet {
   readonly iri: Rdf.Iri;
+  readonly itemHolder?: Rdf.Iri;
   readonly kind: Rdf.Node;
   readonly itemCount?: number;
   readonly items?: ReadonlyArray<SetItem>;
@@ -179,12 +180,14 @@ function parseSets(
 ): Immutable.OrderedMap<string, PlatformSet> {
   const sets = Immutable.OrderedMap<string, PlatformSet>().asMutable();
 
-  for (const {item, kind} of result.results.bindings) {
+  for (const {item, kind, itemHolder} of result.results.bindings) {
     if (!(item && item.isIri())) { continue; }
     if (!isSet(kind)) { continue; }
 
     const itemCount = itemCounts.get(item.value);
-    sets.set(item.value, {iri: item, kind, itemCount, metadata: {}});
+    sets.set(item.value, {
+      iri: item, itemHolder: itemHolder as Rdf.Iri, kind, itemCount, metadata: {}
+    });
   }
 
   return sets.asImmutable();
