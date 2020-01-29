@@ -161,6 +161,10 @@ public class GitStorage implements ObjectStorage {
                     config.getBranch() + "' at " + config.getLocalPath());
                 git.checkout().setName(config.getBranch()).call();
             }
+
+            if (config.getBranch() != null) {
+                git.pull().setRemote("origin").setRemoteBranchName(config.getBranch()).call();
+            }
         } catch (GitAPIException | IOException e) {
             repository.close();
             throw e;
