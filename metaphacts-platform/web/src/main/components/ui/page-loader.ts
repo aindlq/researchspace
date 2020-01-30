@@ -46,7 +46,7 @@ import {Alert, AlertType} from 'platform/components/ui/alert';
  * 	 	urlqueryparam-param1="hello world"
  * 	></mp-page-loader>
  */
-class PageLoaderComponent extends Component<{iri: string}, {}> {
+class PageLoaderComponent extends Component<{iri: string, context?: string}, {}> {
 
   public shouldComponentUpdate(nextProps) {
     return !isEqual(this.props, nextProps);
@@ -65,7 +65,7 @@ class PageLoaderComponent extends Component<{iri: string}, {}> {
     }else {
       return PageViewer({
         iri: Rdf.iri(this.props.iri),
-        context: getCurrentResource(),
+        context: this.props.context ? Rdf.iri(this.props.context) : getCurrentResource(),
         noScroll: true,
         params: {...getCurrentUrl().search(true), ...NavigationUtils.extractParams(this.props)},
       } );
