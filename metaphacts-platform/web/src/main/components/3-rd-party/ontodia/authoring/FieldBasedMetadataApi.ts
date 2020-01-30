@@ -55,7 +55,7 @@ export class FieldBasedMetadataApi implements MetadataApi {
       const postfix = subjectTemplate.toLocaleLowerCase().indexOf('{{uuid}}') === -1 ? uuid() : '';
       newIri = `${filledTemplate}${postfix}` as ElementIri;
     } else {
-      newIri = `NewEntity-${uuid()}` as ElementIri;
+      newIri = `http://researchspace.org/NewEntity-${uuid()}` as ElementIri;
     }
 
     return Promise.resolve(newIri);
