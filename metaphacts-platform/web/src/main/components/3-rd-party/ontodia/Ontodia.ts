@@ -585,56 +585,61 @@ export class Ontodia extends Component<OntodiaProps, State> {
   }
 
   componentDidMount() {
-    fetch('/rs/kp/getAllKps')
-      .then(response => response.json())
-      .then(
-        response => {
-          return _.mapValues(response, normalizeFieldDefinition);
-        }
-      )
-      .then(
-        (allFields: Dictionary<FieldDefinition>) => {
-          this.allFields = allFields;
-
-          let entityMetadata: Map<ElementTypeIri, EntityMetadata> | undefined;
-          let configurationError: unknown;
-          try {
-            entityMetadata = extractAuthoringMetadata(
-              allFields,
-              Children.toArray(this.props.children).filter(isValidChild)
-            );
-          } catch (err) {
-            configurationError = err;
+    if (!window['allFields']) {
+      fetch('/rs/kp/getAllKps')
+        .then(response => response.json())
+        .then(
+          response => {
+            window['allFields'] = _.mapValues(response, normalizeFieldDefinition);
+            this.allFields = window['allFields'];
           }
-          if (configurationError) {
-            this.setState({configurationError});
-          }
-
-          if (entityMetadata && entityMetadata.size > 0) {
-            const forceFields = new Map<string, FieldDefinition>();
-            entityMetadata.forEach(metadata => {
-              metadata.forceFields.forEach(f => forceFields.set(f.iri, f));
-            });
-
-            this.entityMetadata = entityMetadata;
-            this.forceFields = forceFields;
-
-            if (this.props.authoringMode) {
-              this.metadataApi = new FieldBasedMetadataApi(this.entityMetadata);
-              this.validationApi = new FieldBasedValidationApi(this.entityMetadata);
-            }
-          }
-
-          this.parsedMetadata = this.parseMetadata();
-          this.prepareElementTemplates();
-          this.setState({loading: false});
-
-          OntodiaExtension.loadAndUpdate(this, this.cancellation);
-          this.registerEventSources();
-
-        }
-      );
+        ).then(
+          () => this.buildMetadata()
+        );
+    } else {
+      this.allFields = window['allFields'];
+      this.buildMetadata()
+    }
   }
+
+  buildMetadata = () => {
+    let entityMetadata: Map<ElementTypeIri, EntityMetadata> | undefined;
+    let configurationError: unknown;
+    try {
+      entityMetadata = extractAuthoringMetadata(
+        this.allFields,
+        Children.toArray(this.props.children).filter(isValidChild)
+      );
+    } catch (err) {
+      configurationError = err;
+    }
+    if (configurationError) {
+      this.setState({configurationError});
+    }
+
+    if (entityMetadata && entityMetadata.size > 0) {
+      const forceFields = new Map<string, FieldDefinition>();
+      entityMetadata.forEach(metadata => {
+        metadata.forceFields.forEach(f => forceFields.set(f.iri, f));
+      });
+
+      this.entityMetadata = entityMetadata;
+      this.forceFields = forceFields;
+
+      if (this.props.authoringMode) {
+        this.metadataApi = new FieldBasedMetadataApi(this.entityMetadata);
+        this.validationApi = new FieldBasedValidationApi(this.entityMetadata);
+      }
+    }
+
+    this.parsedMetadata = this.parseMetadata();
+    this.prepareElementTemplates();
+    this.setState({loading: false});
+
+    OntodiaExtension.loadAndUpdate(this, this.cancellation);
+    this.registerEventSources();
+  }
+
 
   componentWillUnmount() {
     this.cancellation.cancelAll();
