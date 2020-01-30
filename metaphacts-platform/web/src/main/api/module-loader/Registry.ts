@@ -336,7 +336,7 @@ function processReactComponent(
     throw new WrappingError(`Invalid template markup at <${node.name}>`, error);
   }
 
-  if (attributes['fixedKey'] ) {
+  if (attributes['fixedKey'] && attributes['reparentable']) {
     delete props.key;
     return renderWebComponent(node.name, props, children, templateScope).then(el => {
       return React.createElement(
