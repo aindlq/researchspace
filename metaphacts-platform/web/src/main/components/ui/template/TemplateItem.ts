@@ -18,7 +18,7 @@
 
 import { createElement, ReactElement, cloneElement } from 'react';
 import * as D from 'react-dom-factories';
-import { isEqual } from 'lodash';
+import { isEqual, isArray } from 'lodash';
 import * as classNames from 'classnames';
 import * as Maybe from 'data.maybe';
 
@@ -104,6 +104,8 @@ export class TemplateItem extends Component<TemplateItemProps, State> {
     let component: JSX.Element;
     if (typeof root === 'string') {
       component = D.span({}, root);
+    } else if (isArray(root)) {
+      return root;
     } else if (root) {
       component = cloneElement(root, {
         ...this.props.componentProps,
@@ -125,14 +127,12 @@ export class TemplateItem extends Component<TemplateItemProps, State> {
     return component;
   }
 
-  private getSingleRoot(parsed: ReactElement<any> | ReactElement<any>[]): ReactElement<any> {
+  private getSingleRoot(parsed: ReactElement<any> | ReactElement<any>[]) {
     if (Array.isArray(parsed)) {
       if (parsed.length === 0) {
         return null;
       } else if (parsed.length > 1) {
-        throw new Error(
-          'Expected only a single root element in the template:\n' +
-          this.props.template.source);
+        return parsed;
       } else {
         return parsed[0];
       }
