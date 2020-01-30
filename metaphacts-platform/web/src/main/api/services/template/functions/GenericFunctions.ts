@@ -16,6 +16,8 @@
  * of the GNU Lesser General Public License from http://www.gnu.org/
  */
 
+import * as _ from 'lodash';
+
 /**
  * Handlebars doesn't have any meance to use comparison operators in templates.
  * This function provides conditional if function for templates.
@@ -124,4 +126,23 @@ export const GenericFunctions = {
   raw: function (options) {
     return options.fn(this);
   },
+
+  getValueByKey(options: Array<{key: string, value: string}>, keys: Array<string>, noMatch: any) {
+    for (let i = 0; i < keys.length; i++) {
+      const value = _.find(options, o => o.key === keys[i]);
+      if (value) {
+        return value.value;
+      }
+    }
+    return noMatch;
+  },
+
+  hasKey(options: Array<string>, key: string) {
+    const has = _.some(options, o => o === key);
+    return has ? true : undefined;
+  },
+
+  stringify(options) {
+    return JSON.stringify(options);
+  }
 };

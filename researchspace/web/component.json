@@ -48,5 +48,7 @@
   "rs-text-editor": "researchspace/components/text-editor/TextEditor.tsx",
 
   "rs-dashboard": "researchspace/components/dashboard/DashboardComponent.tsx",
-  "rs-image-graph-authoring": "researchspace/components/iiif/image-graph-authoring/ImageGraphAuthoring.tsx"
+  "rs-image-graph-authoring": "researchspace/components/iiif/image-graph-authoring/ImageGraphAuthoring.tsx",
+
+  "with-types": "researchspace/components/ui/WithTypes.tsx"
 }
