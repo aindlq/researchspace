@@ -1215,7 +1215,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
         onSave: label => this.onSaveModalSubmit(label, layout),
         onHide: () => getOverlaySystem().hide(dialogRef),
         show: true,
-        title: 'Save Ontodia diagram',
+        title: this.props.saveDiagramLabel || 'Save Ontodia diagram',
         placeholder: 'Enter diagram name',
       })
     );
