@@ -32,6 +32,7 @@ import { Spinner } from 'platform/components/ui/spinner';
 interface Props {
   iri?: string
   types?: Array<string>
+  templateContext: any
   template: string
   variables: any
 }
@@ -181,7 +182,8 @@ export class WithTypes extends Component<Props, State> {
       return <Spinner />;
     } else {
       return <TemplateItem template={{
-        source: this.props.template, options: {...this.state.result, ...this.props.variables}
+        source: this.props.template,
+        options: {...this.props.templateContext, ...this.state.result, ...this.props.variables}
         }} />;
     }
   }
