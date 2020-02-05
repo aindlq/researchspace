@@ -127,17 +127,10 @@ export class DashboardComponent extends Component<Props, State> {
   constructor(props: Props, context: any) {
     super(props, context);
 
-    let item: Item = Item.emptyItem();
-    if (props.initialView) {
-      item = {
-        ...item,
-        resourceIri: props.initialView.resource,
-        viewId: props.initialView.view
-      };
-    }
     this.state = {
-      items: [item],
+      items: []
     };
+
   }
 
   componentDidMount() {
@@ -154,6 +147,17 @@ export class DashboardComponent extends Component<Props, State> {
         });
       }
     });
+
+    if (this.props.initialView) {
+      const item = {
+        ...Item.emptyItem(),
+        resourceIri: this.props.initialView.resource,
+        viewId: this.props.initialView.view
+      };
+      this.onAddNewItem(item);
+    } else {
+      this.onAddNewItem();
+    }
   }
 
   componentWillUnmount() {
@@ -165,6 +169,8 @@ export class DashboardComponent extends Component<Props, State> {
       const newItems = [...prevState.items];
       newItems.push(item);
       return {items: newItems};
+    }, () => {
+      this.onSelectView({itemId: item.id, viewId: item.viewId, resourceIri: item.resourceIri});
     });
   }
 
