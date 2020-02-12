@@ -100,6 +100,18 @@ export class AutocompleteInput extends AtomicValueInput<AutocompleteInputProps, 
           autofocus={false}
           query={this.props.definition.autosuggestionPattern}
           placeholder={placeholder}
+          droppable={{
+            query: 'ASK {}',
+            styles: {
+              enabled: {
+                outline: '3px dashed #1D0A6E'
+              },
+              enabledHover: {
+                outline: '5px dashed #1D0A6E'
+              },
+              disabled: {}
+            } as any
+          }}
           value={value}
           templates={{suggestion: this.tupleTemplate}}
           actions={{
@@ -115,7 +127,6 @@ export class AutocompleteInput extends AtomicValueInput<AutocompleteInputProps, 
             bsStyle='default'
             onClick={this.toggleNestedForm}>
             <span className='fa fa-plus' />
-            {' Create new'}
           </Button>
         ) : null}
       </div>
