@@ -204,6 +204,15 @@ public class KnowledgePatternGenerator {
             .add(RDF.TYPE, SP.QUERY_CLASS)
             .add(SP.TEXT_PROPERTY, insertPattern);
 
+        String deletePattern =
+            "DELETE { $subject <" + prop.stringValue() + "> $value . } WHERE { $subject <" + prop.stringValue() + "> $value . }";
+        BNode deleteQueryNode = this.vf.createBNode();
+        builder
+            .add(kpIri, FIELDS.DELETE_PATTERN, deleteQueryNode)
+            .subject(deleteQueryNode)
+            .add(RDF.TYPE, SP.QUERY_CLASS)
+            .add(SP.TEXT_PROPERTY, deletePattern);
+
 
         return kpIri;
     };

@@ -88,9 +88,8 @@ public class KnowledgePatternsEndpoint {
     @GET
     @Path("/generateKmConfig")
     public Response generateKmConfig() {
-        return Response.ok(cg.generateKmConfig())
-            .header("content-disposition", "attachment; filename = authoring-config.html")
-            .build();
+    	cg.generateKmConfig();
+        return Response.ok().build();
     }
 
     @GET

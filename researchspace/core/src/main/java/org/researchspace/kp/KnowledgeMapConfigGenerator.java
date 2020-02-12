@@ -18,7 +18,11 @@
 
 package org.researchspace.kp;
 
-import java.io.IOException;import java.util.Collection;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -31,6 +35,11 @@ import com.github.jknack.handlebars.context.FieldValueResolver;
 import com.github.jknack.handlebars.io.ClassPathTemplateLoader;
 import com.google.common.base.Throwables;
 import com.metaphacts.repository.RepositoryManager;
+import com.metaphacts.services.storage.api.ObjectMetadata;
+import com.metaphacts.services.storage.api.PlatformStorage;
+import com.metaphacts.services.storage.api.StorageException;
+import com.metaphacts.services.storage.api.StoragePath;
+import com.metaphacts.templates.TemplateByIriLoader;
 import com.metaphacts.vocabulary.FIELDS;
 
 import org.apache.logging.log4j.LogManager;
@@ -38,6 +47,7 @@ import org.apache.logging.log4j.Logger;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Model;
 import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.QueryLanguage;
 
@@ -87,8 +97,11 @@ public class KnowledgeMapConfigGenerator {
 
     @Inject
     private RepositoryManager rm;
+    
+    @Inject
+    private PlatformStorage platformStorage;
 
-    public String generateKmConfig() {
+    public void generateKmConfig() {
         try(RepositoryConnection con = rm.getDefault().getConnection()) {
             // get all classes used in domain and range position for KPs
             // including all possible subclasses
@@ -100,7 +113,6 @@ public class KnowledgeMapConfigGenerator {
                 "    ?kp <http://www.metaphacts.com/ontology/fields#range> ?c . \n" +
                 "  }\n" +
                 "  ?class rdfs:subClassOf* ?c" +
-                "  FILTER (?class NOT IN (<http://www.researchspace.org/ontology/EX_Digital_Image>, <http://www.researchspace.org/ontology/EX_Digital_Image_Region>))" +
                 "} ORDER BY ?class";
 
             List<Class> cs =
@@ -115,12 +127,32 @@ public class KnowledgeMapConfigGenerator {
                 new Handlebars()
                 .prettyPrint(true)
                 .with(new ClassPathTemplateLoader());
+            handlebars.setStartDelimiter("<%");
+            handlebars.setEndDelimiter("%>");
 
             Context context = Context
                 .newBuilder(cs)
                 .resolver(FieldValueResolver.INSTANCE).build();
 
-            return handlebars.compile("org/researchspace/kp/KMConfig").apply(context);
+            String template =
+                handlebars.compile("org/researchspace/kp/KMConfig").apply(context);
+
+            IRI iri = SimpleValueFactory.getInstance().createIRI("http://www.researchspace.org/resource/AuthoringConfig");
+            StoragePath objectId = TemplateByIriLoader.templatePathFromIri(iri);
+
+            byte[] bytes = template.getBytes(StandardCharsets.UTF_8);
+            InputStream newContent = new ByteArrayInputStream(bytes);
+            try {
+                platformStorage.getStorage("custom-app-id").appendObject(
+                                                                     objectId,
+                                                                     new ObjectMetadata(null, null),
+                                                                     newContent,
+                                                                     bytes.length
+                                                                     );
+            } catch (StorageException e) {
+            	throw new RuntimeException(e);
+            }
+
          } catch (IOException e) {
             Throwables.throwIfUnchecked(e);
             throw new RuntimeException(e);
@@ -135,7 +167,7 @@ public class KnowledgeMapConfigGenerator {
             "SELECT DISTINCT ?kp ?datatype WHERE {\n" +
             "  <" + classIri + "> rdfs:subClassOf* ?class . \n" +
             "  ?kp <http://www.metaphacts.com/ontology/fields#domain> ?class. \n" +
-            "  FILTER(?kp NOT IN(<http://www.researchspace.org/instances/fields/EntityType>, <http://www.researchspace.org/instances/fields/EntityHasLabel>, <http://www.cidoc-crm.org/cidoc-crm/P138i_has_representation>, <http://www.researchspace.org/instances/fields/EntityhasConnection>, <http://www.researchspace.org/instances/fields/EntityHasVideo>)). \n" +
+            "  FILTER(?kp NOT IN(<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>, <http://www.w3.org/2000/01/rdf-schema#label>, <http://www.researchspace.org/ontology/PX_has_main_representation>, <http://www.researchspace.org/ontology/PX_is_connected>, <http://www.researchspace.org/ontology/PX_has_video> )). \n" +
             "  ?kp <http://www.metaphacts.com/ontology/fields#xsdDatatype> ?datatype . \n" +
             "} ORDER BY ?kp";
 
