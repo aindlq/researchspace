@@ -741,6 +741,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
       const {
         onLoadWorkspace, imageIris, provisionQuery, acceptBlankNodes,
         settings: configName, autoZoom, hideNavigationConfirmation, authoringMode,
+        imageQuery,
       } = this.props;
 
       this.workspace = workspace;
@@ -748,9 +749,11 @@ export class Ontodia extends Component<OntodiaProps, State> {
         onLoadWorkspace(workspace);
       }
 
+      const prepareImages = (!imageIris && !imageQuery) || imageQuery ? this.prepareImages : undefined;
+
       const options: SparqlDataProviderOptions = {
         endpointUrl: '',
-        prepareImages: this.prepareImages,
+        prepareImages: prepareImages,
         prepareLabels: this.prepareLabels,
         imagePropertyUris: imageIris,
         queryMethod: SparqlQueryMethod.POST,
