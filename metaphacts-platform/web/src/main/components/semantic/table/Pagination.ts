@@ -81,6 +81,12 @@ export class Pagination extends Component<PaginationProps, {}> {
 
   render() {
     if (this.props.maxPage > 1) {
+      const first = D.li({
+        className: this.props.currentPage === 0 ? 'disabled' : '',
+      }, D.a({onClick: () => this.props.setPage(0)}, '⇤'));
+      const last = D.li({
+        className: this.props.currentPage == (this.props.maxPage - 1) ? 'disabled' : '',
+      }, D.a({onClick: () => this.props.setPage(this.props.maxPage - 1)}, '⇥'));
       var previous = D.li({
         className: this.props.currentPage == 0 ? 'disabled' : '',
       }, D.a({
@@ -116,7 +122,7 @@ export class Pagination extends Component<PaginationProps, {}> {
         );
       }
 
-      return D.nav({}, D.ul({className: 'pagination'}, previous, options, next));
+      return D.nav({}, D.ul({className: 'pagination'}, first, previous, options, next, last));
     } else { return D.nav({}); }
   }
 }
