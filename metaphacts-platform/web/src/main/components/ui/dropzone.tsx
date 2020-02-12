@@ -28,7 +28,7 @@ export interface DropzoneProps extends DropzoneOptions {
 
 const DEFAULT_STYLE: React.CSSProperties = {
   width: 200,
-  height: 200,
+  height: 100,
   borderWidth: 2,
   borderColor: 'rgb(102, 102, 102)',
   borderStyle: 'dashed',

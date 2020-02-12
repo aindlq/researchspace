@@ -21,3 +21,5 @@ export const fileIcon: string;
 export const spinner: string;
 export const mpDropZonePlaceHolder: string;
 export const uploadCompletedPlaceholder: string;
+export const selectorHolder: string;
+export const urlInputHolder: string;

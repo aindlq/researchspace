@@ -36,6 +36,7 @@ import { EmptyValue, CompositeValue, AtomicValue, FieldValue, ErrorKind } from '
 import FileVisualizer from './FileVisualizer';
 
 import * as styles from './FileManager.scss';
+import { Form, FormControl, Button, InputGroup, FormGroup, Radio } from 'react-bootstrap';
 
 interface FileInputConfig {
   /** Target storage ID. */
@@ -88,6 +89,12 @@ interface FileInputConfig {
    * custom placeholder by passing a child component.
    */
   placeholder?: string;
+
+  /**
+   * Upload file from the url or drop.
+   * @default false
+   */
+  fromUrlOrDrop?: boolean;
 }
 
 export interface FileInputProps extends AtomicValueInputProps, FileInputConfig {}
@@ -96,6 +103,7 @@ interface State {
   alertState?: AlertConfig;
   progress?: number;
   progressText?: string;
+  selectUrl?: boolean;
 }
 
 /**
@@ -105,6 +113,7 @@ interface State {
  */
 export class FileInput extends AtomicValueInput<FileInputProps, State> {
   private readonly cancellation = new Cancellation();
+  private urlInputRef: HTMLInputElement;
 
   constructor(props: FileInputProps, context: any) {
     super(props, context);
@@ -224,7 +233,16 @@ export class FileInput extends AtomicValueInput<FileInputProps, State> {
 
   renderBody = () => {
     if (FieldValue.isEmpty(this.props.value)) {
-      return this.renderDropZone();
+      if (true) {
+        return (
+          <div className={styles.selectorHolder}>
+            {this.renderInputSelector()}
+            {this.state.selectUrl ? this.renderUrlInput() : this.renderDropZone()}
+          </div>
+        );
+      } else {
+        return this.renderDropZone();
+      }
     } else if (this.state.alertState) {
       return this.renderError();
     } else {
@@ -260,6 +278,59 @@ export class FileInput extends AtomicValueInput<FileInputProps, State> {
       </Dropzone>
       {alert ? <div className={styles.alertComponent}>{alert}</div> : null}
     </div>;
+  }
+
+  renderUrlInput = () => {
+    return (
+      <div className={styles.urlInputHolder}>
+        <FormControl inputRef={ref => { this.urlInputRef = ref; }}
+          type='text' placeholder='Please type file URL here' />
+        <Button bsStyle='primary' type='submit'
+          onClick={this.fetchFileFromUrl}
+        >Fetch</Button>
+      </div>
+    );
+  }
+
+  renderInputSelector = () => {
+    return (
+      <FormGroup>
+        <Radio name='inputSelector' inline
+          checked={!this.state.selectUrl}
+          onClick={ () => this.setState({selectUrl: false}) }
+        >
+          File Upload
+        </Radio>{' '}
+        <Radio name='inputSelector' inline
+          checked={this.state.selectUrl}
+          onClick={ () => this.setState({selectUrl: true}) }
+        >
+          URL
+        </Radio>{' '}
+      </FormGroup>
+    );
+  }
+
+  fetchFileFromUrl = () => {
+    if (!_.isEmpty(this.urlInputRef?.value)) {
+      fetch(this.urlInputRef.value)
+        .then((response) => {
+          if (!response.ok) {
+            this.setState({
+              alertState: {
+                alert: AlertType.WARNING,
+                message: 'Faild to fetch file from URL!',
+              }
+            });
+          }
+          return response.blob();
+        })
+        .then(
+          blob => {
+            this.onDropAccepted([new File([blob], this.urlInputRef.value, {type: blob.type})]);
+          }
+        );
+    }
   }
 
   removeFile = () => {
