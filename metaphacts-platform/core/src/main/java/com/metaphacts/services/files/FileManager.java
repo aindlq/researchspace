@@ -40,6 +40,9 @@ import org.eclipse.rdf4j.repository.RepositoryException;
 import javax.inject.Inject;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Optional;
@@ -149,7 +152,7 @@ public class FileManager {
         String createResourceQuery,
         String contextUri,
         String mediaType
-    ) {
+    ) throws URISyntaxException, MalformedURLException {
         FileContainer fileContainer = (FileContainer) LDPImplManager.getLDPImplementation(
             FileContainer.IRI,
             Sets.newHashSet(LDP.Container, LDP.Resource),
@@ -174,6 +177,12 @@ public class FileManager {
                 (isContextUriEmpty ? DEFAULT_CONTEXT_IRI : contextUri) + fileName.getName()
             );
         }
+        
+        // we need to normalize generated IRI using java URI->URL class that will cleanup
+        // possible issues with IRI (like some strange symbols, etc), because
+        // IRI need to be used later as URL
+        URI uri = new URI(resourceIri.stringValue());
+        resourceIri = vf.createIRI(uri.toASCIIString());
 
         // creating resource data
         PointedGraph resourcePointedGraph = processQuery(
