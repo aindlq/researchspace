@@ -281,14 +281,19 @@ export class FileInput extends AtomicValueInput<FileInputProps, State> {
   }
 
   renderUrlInput = () => {
+    const alert = this.state.alertState ? <Alert {...this.state.alertState}></Alert> : null;
     return (
-      <div className={styles.urlInputHolder}>
-        <FormControl inputRef={ref => { this.urlInputRef = ref; }}
-          type='text' placeholder='Please type file URL here' />
-        <Button bsStyle='primary' type='submit'
-          onClick={this.fetchFileFromUrl}
-        >Fetch</Button>
-      </div>
+      <React.Fragment>
+        {alert ? <div className={styles.alertComponent}>{alert}</div> : null}
+
+        <div className={styles.urlInputHolder}>
+          <FormControl inputRef={ref => { this.urlInputRef = ref; }}
+            type='text' placeholder='Please type file URL here' />
+          <Button bsStyle='primary' type='submit'
+            onClick={this.fetchFileFromUrl}
+          >Fetch</Button>
+        </div>
+      </React.Fragment>
     );
   }
 
@@ -329,7 +334,15 @@ export class FileInput extends AtomicValueInput<FileInputProps, State> {
           blob => {
             this.onDropAccepted([new File([blob], this.urlInputRef.value, {type: blob.type})]);
           }
-        );
+        ).catch((e: Error) => {
+          this.setState({
+            alertState: {
+              alert: AlertType.WARNING,
+              message: e.message + ' Please, try to upload the file manually.',
+            }
+          });
+        });
+
     }
   }
 
