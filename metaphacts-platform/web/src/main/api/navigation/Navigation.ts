@@ -292,7 +292,7 @@ export function resolveResourceIri(url: uri.URI): Kefir.Property<Data.Maybe<Rdf.
       Maybe.Just(Rdf.iri(iriStr))
     );
   } else {
-    const prefixedIriStr = url.filename();
+    const prefixedIriStr = url.path().substring('/resource/'.length);
     return getFullIri(prefixedIriStr);
   }
 }
