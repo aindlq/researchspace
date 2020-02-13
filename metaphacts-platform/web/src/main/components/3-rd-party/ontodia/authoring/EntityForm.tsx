@@ -29,6 +29,8 @@ import { isValidChild, universalChildren } from 'platform/components/utils';
 
 import * as styles from './EntityForm.scss';
 import { Rdf } from 'platform/api/rdf';
+import { SparqlUtil } from 'platform/api/sparql';
+
 
 export interface EntityFormProps {
   newSubjectTemplate?: string;
@@ -92,14 +94,19 @@ export class EntityForm extends Component<EntityFormProps, State> {
   }
 
   private modifyModelsIriBySuggestion(model: CompositeValue): CompositeValue {
-    return {
-      ...model,
-      subject: generateSubjectByTemplate(
-        this.props.newSubjectTemplate,
-        undefined,
-        { ...model, subject: new Rdf.Iri('')}
-      ),
-    };
+    if (this.props.acceptIriAuthoring) {
+      const base = Rdf.iri(SparqlUtil.RegisteredPrefixes['Default']);
+      return {
+        ...model,
+        subject: generateSubjectByTemplate(
+          this.props.newSubjectTemplate,
+          base,
+          { ...model, subject: new Rdf.Iri('')}
+        ),
+      };
+    } else {
+      return model;
+    }
   }
 
   private modelEqualToSuggested(model: CompositeValue): boolean {

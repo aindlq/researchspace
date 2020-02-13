@@ -22,6 +22,7 @@ import * as Kefir from 'kefir';
 import * as URI from 'urijs';
 
 import { Rdf, XsdDataTypeValidation, vocabularies } from 'platform/api/rdf';
+import { SparqlUtil } from 'platform/api/sparql';
 
 import { FieldDefinition } from './FieldDefinition';
 import {
@@ -62,12 +63,13 @@ export function generateSubjectByTemplate(
   });
 
   const isAbsoluteUri = URI(subject).scheme();
-  if (isAbsoluteUri || !ownerSubject) {
+  if (isAbsoluteUri) {
     return Rdf.iri(subject);
   }
 
-  const combinedPath = URI.joinPaths(ownerSubject.value, subject).toString();
-  return Rdf.iri(URI(ownerSubject.value).pathname(combinedPath).toString());
+  const base = ownerSubject ? ownerSubject.value : SparqlUtil.RegisteredPrefixes['Default'];
+  const combinedPath = URI.joinPaths(base, subject).toString();
+  return Rdf.iri(URI(base).pathname(combinedPath).toString());
 }
 
 export function makeDefaultSubjectReplacer(): SubjectReplacer {
