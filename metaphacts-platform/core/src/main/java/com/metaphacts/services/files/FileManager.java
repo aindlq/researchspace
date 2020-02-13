@@ -20,6 +20,7 @@ package com.metaphacts.services.files;
 
 import com.google.common.collect.Sets;
 import com.metaphacts.api.sparql.SparqlOperationBuilder;
+import com.metaphacts.config.NamespaceRegistry;
 import com.metaphacts.data.rdf.PointedGraph;
 import com.metaphacts.data.rdf.container.FileContainer;
 import com.metaphacts.data.rdf.container.LDPImplManager;
@@ -53,6 +54,9 @@ public class FileManager {
 
     private final ValueFactory vf = SimpleValueFactory.getInstance();
     private final Random sequenceGenerator = new SecureRandom();
+
+    @Inject
+    private NamespaceRegistry nsRegistry;
 
     @Inject
     public FileManager() {}
@@ -219,6 +223,7 @@ public class FileManager {
             SparqlOperationBuilder.create(generateIriQuery, TupleQuery.class);
 
         operationBuilder = operationBuilder
+            .setNamespaces(nsRegistry.getPrefixMap())
             .setBinding(DOCUMENT_NAME, vf.createLiteral(fileName.getName()))
             .setBinding(MEDIA_TYPE, vf.createLiteral(mediaType));
 
