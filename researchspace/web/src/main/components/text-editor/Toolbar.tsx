@@ -29,7 +29,6 @@ import { ResourceTemplateConfig } from './Config';
 import * as styles from './TextEditor.scss';
 
 export const BLOCK_TO_ICON: { [block in Block]: string } = {
-  [Block.title]: 'fa-header',
   [Block.empty]: 'fa-plus',
   [Block.embed]: 'fa-file-code-o',
   [Block.p]: 'fa-paragraph',
@@ -42,7 +41,6 @@ export const BLOCK_TO_ICON: { [block in Block]: string } = {
 };
 
 const BLOCK_TO_LABEL: { [block in Block]: string } = {
-  [Block.title]: 'TITLE',
   [Block.empty]: 'Placeholder',
   [Block.embed]: 'Resource',
   [Block.p]: 'Paragraph',
@@ -74,6 +72,7 @@ export interface ToolbarProps {
   anchorBlock: Slate.Block
   options?: { [objectIri: string]: ResourceTemplateConfig[] }
   onDocumentSave: () => void;
+  saving?: boolean;
 }
 
 export class Toolbar extends React.Component<ToolbarProps> {
@@ -213,11 +212,14 @@ export class Toolbar extends React.Component<ToolbarProps> {
   }
 
   render() {
+    const { saving } = this.props;
     return (
       <ButtonToolbar className={styles.toolbar}>
         <ButtonGroup>
-          <Button bsStyle='primary' onClick={this.props.onDocumentSave}>
-            <i className='fa fa-floppy-o' aria-hidden='true'></i> &nbsp; Save
+          <Button bsStyle='primary' onClick={this.props.onDocumentSave} disabled={saving}>
+            <i className={saving ? 'fa fa-spinner fa-pulse fa-fw' : 'fa fa-floppy-o' }
+              aria-hidden='true'></i>
+            &nbsp; Save
           </Button>
         </ButtonGroup>
 
@@ -429,7 +431,7 @@ export class BlockDropdown extends React.Component<BlockDropdownProps> {
     const block = anchorBlock ? anchorBlock.type as Block : Block.empty;
 
     return (
-      <Dropdown id='blocks' pullRight={true} disabled={this.hasBlock(Block.title)}>
+      <Dropdown id='blocks' pullRight={true}>
         <Dropdown.Toggle bsSize={sidebar ? 'xsmall' : null}
           className={sidebar ? styles.sidebarDropdown : ''}
         >

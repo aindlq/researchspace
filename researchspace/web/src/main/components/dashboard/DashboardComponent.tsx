@@ -134,6 +134,9 @@ export class DashboardComponent extends Component<Props, State> {
   }
 
   componentDidMount() {
+    // TODO
+    window['inFrames'] = true;
+
     this.cancellation.map(
       listen({
         eventType: AddFrameEvent,
@@ -162,6 +165,8 @@ export class DashboardComponent extends Component<Props, State> {
 
   componentWillUnmount() {
     this.cancellation.cancelAll();
+
+    window['inFrames'] = false;
   }
 
   private onAddNewItem = (item: Item = Item.emptyItem()) => {

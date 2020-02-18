@@ -32,7 +32,6 @@ export const MARK = {
 export type Mark = keyof typeof MARK;
 
 export const Block = {
-  title: 'title',
   empty: 'empty',
   embed: 'embed',
   p: 'p',
@@ -77,19 +76,14 @@ export const schema: Slate.SchemaProperties = {
   document: {
     nodes: [
       {
-        match: { type: Block.title }, min: 1, max: 1
-      },
-      { min: 1 },
-      {
-        match: _.values(Block).map(block => ({ type: block })),
+        match: _.values(Block).map(block => ({ type: block })), min: 1
       },
     ],
     normalize: (editor: Slate.Editor, error: Slate.SlateError) => {
       const { code, node, index } = error;
       switch (code) {
         case 'child_min_invalid': {
-          console.log('child_min_invalid')
-          const block = Slate.Block.create(index === 0 ? Block.title : Block.empty);
+          const block = Slate.Block.create(Block.empty);
           return editor.insertNodeByKey(node.key, index, block);
         }
       }

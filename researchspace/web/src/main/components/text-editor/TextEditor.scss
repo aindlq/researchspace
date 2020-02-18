@@ -20,31 +20,20 @@
 
 // Text Editor
 
-$editorHeight: 74vh;
+$editorWidth: 794px;
+
+:global(.Dashboard--template) {
+  height: 100%;
+}
 
 .narrativeHolder {
-  & > :global(.panel) {
-    margin-bottom: 0;
-
-    & > :global(.panel-body) {
-      overflow: auto;
-      height: $editorHeight;
-      padding: 0;
-    }
-  }
-
-  & > :global(.panel-default > .panel-heading) {
-    background-color: #ecf0f1;
-    border-color: #DDD;
-
-    a {
-     color: #2F323B;
-    }
-  }
+  height: 100%;
+  background-color: #f8f9fa;
+  padding-bottom: 50px;
 
   // DropArea styling
   :global(.DropArea--dropArea) {
-    height: 30px;
+    height: 27.5px;
   }
 
   :global(.DropArea--dropArea.mp-droppable-enabled > .DropArea--children) {
@@ -70,22 +59,14 @@ $editorHeight: 74vh;
 
 }
 
-.title {
-  font-size: 32px !important;
-  position: relative;
+.titleHolder {
+  display: flex;
+}
 
-  &::before {
-    display: inline-block;
-    background-image: $drag-handle-image;
-    width: 5px;
-    height: 22px;
-    margin-right: 12px;
-    cursor: grab;
-    content: " ";
-    position: absolute;
-    left: -10px;
-    top: 9px;
-  }
+.titleInput {
+  width: $editorWidth - 17px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .resourceBlock {
@@ -110,20 +91,21 @@ $editorHeight: 74vh;
  get relative position of the editor and use it for sidebar positioning
 */
 .sidebarAndEditorHolder {
-  position: relative;
   overflow: auto;
   background-color: #f8f9fa;
   display: flex;
-  justify-content: center;
-  min-height: $editorHeight;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
 }
 
 .editorContainer {
   // need for text-align to work properly
   white-space: normal;
 
+  border: 1px solid #ddddddd1;
   background-color: rgb(255, 255, 255);
-  width: 794px;
+  width: $editorWidth;
   box-shadow: 0 1px 3px 1px rgba(60,64,67,.15);
 
   // for edit mode, later extract
@@ -162,11 +144,23 @@ $editorHeight: 74vh;
 
 
 // Toolbar
-
 .toolbar {
   display: flex;
   justify-content: center;
+  padding: $padding-base-vertical 0;
 }
+
+.draggableGripper {
+  background-image: url('/images/gripper.svg');
+  width: 5px;
+  height: 33px;
+  margin-top: 2px;
+  margin-right: $padding-base-horizontal;
+  cursor: move;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
 
 .dropdown {}
 
@@ -223,6 +217,10 @@ $editorHeight: 74vh;
 
   & :global(.DropArea--dropMessage) {
     height: $input-height-base !important;
+  }
+
+  & :global(.DropArea--dropArea.mp-droppable-hover .DropArea--dropMessage) {
+    background-color: rgba(29, 10, 110, 0.3) !important;
   }
 
   & a {

@@ -88,9 +88,6 @@ export const SLATE_RULES: Rule[] = [
             obj.type,
             obj.data.get('attributes', {})
           );
-        } else if (obj.type === Block.title) {
-          // we serialize title separately as head/title
-          return null;
         } else {
           return React.createElement(
             obj.type,

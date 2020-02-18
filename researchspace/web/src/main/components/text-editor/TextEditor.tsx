@@ -19,7 +19,7 @@
 import * as _ from 'lodash';
 import * as Kefir from 'kefir';
 import { Editor, RenderMarkProps, RenderNodeProps } from 'slate-react';
-import { Panel } from 'react-bootstrap';
+import { Panel, FormControl, FormGroup } from 'react-bootstrap';
 import PlaceholderPlugin from 'slate-react-placeholder';
 import * as Slate from 'slate';
 import isHotkey from 'is-hotkey';
@@ -90,29 +90,25 @@ interface TextEditorProps {
 
 interface TextEditorState {
   value: Slate.Value
+  title: string
+  documentIri?: string
   fileName?: string
   anchorBlock?: Slate.Block
   availableTemplates: { [objectIri: string]: ResourceTemplateConfig[] }
   loading: boolean
+  saving: boolean
 }
 
 const plugins = [
   {
     queries: {
-      isEmptyTitle: (_editor, node: Slate.Block) =>
-        node.type === Block.title && node.text === ''
-      ,
       isEmptyFirstParagraph: (editor: Slate.Editor, node: Slate.Block) =>
-        editor.value.document.nodes.size === 2 &&
+        editor.value.document.nodes.size === 1 &&
         node.type === Block.empty &&
         node.text === ''
       ,
     },
   },
-  PlaceholderPlugin({
-    placeholder: 'Enter a Title',
-    when: 'isEmptyTitle',
-  }),
   PlaceholderPlugin({
     placeholder: 'Enter narrative',
     when: 'isEmptyFirstParagraph',
@@ -156,24 +152,23 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
         nodes: [
           {
             object: 'block' as const,
-            type: Block.title,
-          },
-          {
-            object: 'block' as const,
             type: Block.empty,
           },
         ],
       }
     }),
+    title: 'New Narrative',
     anchorBlock: null as Slate.Block,
     availableTemplates: {},
     loading: true,
+    saving: false,
   };
 
   constructor(props: TextEditorProps, context) {
     super(props, context);
     this.editorRef = React.createRef<Editor>();
     this.state.loading = !!props.documentIri;
+    this.state.documentIri = props.documentIri;
   }
 
   onChange = ({ value }: { value: Slate.Value }) => {
@@ -256,19 +251,6 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
   renderBlock = (props: RenderNodeProps, editor: Slate.Editor, next: () => any): any => {
     const { node: { type }, attributes, children } = props;
     switch (type) {
-      case Block.title:
-        if (this.props.documentIri) {
-          return (
-            <Draggable iri={this.props.documentIri}>
-              <span>
-                <span className='drag-gripper'></span>
-                <h1 {...attributes} className={styles.title}>{children}</h1>
-              </span>
-            </Draggable>
-          );
-        } else {
-          return <h1 {...attributes} className={styles.title}>{children}</h1>;
-        }
       case Block.empty: return this.emptyBlock(props);
       case Block.embed:
         return <ResourceBlock {...attributes} {...props}
@@ -310,16 +292,6 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
     const { value } = editor;
     if (isHotkey('enter', event)) {
       if (
-        value.endBlock.type === Block.title &&
-        value.document.nodes.size === 2 &&
-        value.selection.isCollapsed &&
-        value.selection.start.isAtEndOfNode(value.endBlock) &&
-        value.document.getNextBlock(value.endBlock.key).text === ''
-      ) {
-        // if we are at the end of title and the first paragraph is empty
-        // we just move cursor to the paragraph
-        editor.moveToStartOfNextText();
-      } else if (
         value.selection.isCollapsed &&
         value.endBlock.type === Block.li &&
         value.endBlock.text === ''
@@ -331,7 +303,8 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
           .setBlocks(DEFAULT_BLOCK);
       } else if (
         value.selection.isCollapsed &&
-        value.selection.start.isAtEndOfNode(value.endBlock)
+        value.selection.start.isAtEndOfNode(value.endBlock) &&
+        value.endBlock.type !== Block.li
       ) {
         editor.insertBlock(DEFAULT_BLOCK);
       } else {
@@ -349,6 +322,9 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
     } else {
       next();
     }
+  }
+
+  private onFocus = () => {
   }
 
   componentDidMount() {
@@ -387,18 +363,29 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
     } else {
       return (
         <div className={styles.narrativeHolder}>
-          <Panel
-            header={
-              <Toolbar
-                value={this.state.value}
-                anchorBlock={this.state.anchorBlock}
-                editor={this.editorRef}
-                options={this.state.availableTemplates}
-                onDocumentSave={this.onDocumentSave}
-              />
-            }
-          >
+          <Toolbar
+                  saving={this.state.saving}
+                  value={this.state.value}
+                  anchorBlock={this.state.anchorBlock}
+                  editor={this.editorRef}
+                  options={this.state.availableTemplates}
+                  onDocumentSave={this.onDocumentSave}
+          />
             <div className={styles.sidebarAndEditorHolder}>
+              <div className={styles.titleHolder}>
+                {this.state.documentIri ? (
+                <Draggable iri={this.state.documentIri}>
+                  <span className={styles.draggableGripper}></span>
+                </Draggable>
+              ) : null}
+              <FormGroup bsClass={`form-group ${styles.titleInput}`}>
+                <FormControl
+                  value={this.state.title} type='text'
+                  onChange={event => this.setState({title: (event.target as any).value})}
+                  placeholder='Please enter document title'
+                />
+              </FormGroup>
+              </div>
               <div className={styles.editorContainer}>
                 <Editor
                   ref={this.editorRef}
@@ -407,13 +394,14 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
                   renderMark={this.renderMark}
                   renderNode={this.renderBlock}
                   onKeyDown={this.onKeyDown}
+                  onDrop={() => {/**/ } }
+                  onFocus={this.onFocus}
                   schema={schema}
                   onChange={this.onChange}
                   plugins={plugins}
                 />
               </div>
             </div>
-          </Panel>
         </div>
       );
     }
@@ -436,17 +424,6 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
 
     const value = slateHtml.deserialize(content, { toJSON: true });
 
-    value.document.nodes.unshift({
-      object: 'block',
-      type: Block.title,
-      data: {},
-      nodes: [{
-        object: 'text',
-        text: htmlTitle,
-        marks: [],
-      } as any]
-    });
-
     // load templates for embeds
     const embeds =
       value.document.nodes
@@ -463,14 +440,14 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
 
     if (_.isEmpty(embeds)) {
       this.setState({
-        value: Slate.Value.fromJS(value), fileName, loading: false,
+        value: Slate.Value.fromJS(value), fileName, loading: false, title: htmlTitle,
       });
     } else {
       Kefir.combine(
         embeds
       ).onValue(
         templates => this.setState({
-          value: Slate.Value.fromJS(value), fileName, loading: false,
+          value: Slate.Value.fromJS(value), fileName, loading: false, title: htmlTitle,
           availableTemplates: templates
         })
       );
@@ -510,20 +487,16 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
 
 
   private onDocumentSave = () => {
-    const { value } = this.state;
-    const titleBlock =
-      value.document.nodes.find(n => n.type === Block.title);
+    this.setState({saving: true});
+    const { value, title } = this.state;
 
     const html = new Html({ rules: SLATE_RULES });
     const content =
-      this.wrapInHtml(
-        titleBlock.text,
-        html.serialize(value)
-      );
+      this.wrapInHtml(title, html.serialize(value));
 
     const blob = new Blob([content]);
     const fileName =
-      this.state.fileName || titleBlock.text.replace(/[^a-z0-9_\-]/gi, '_') + '.html';
+      this.state.fileName || title.replace(/[^a-z0-9_\-]/gi, '_') + '.html';
     const file = new File([blob], fileName);
 
     const parsedResouercQuery =
@@ -533,7 +506,7 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
     const resourceQuery =
       SparqlUtil.serializeQuery(
         SparqlClient.setBindings(
-          parsedResouercQuery, { '__label__': Rdf.literal(titleBlock.text) }
+          parsedResouercQuery, { '__label__': Rdf.literal(title) }
         )
       );
 
@@ -546,7 +519,9 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
         contextUri: 'http://www.researchspace.org/instances/narratives',
       })
     ).observe({
-      value: resource => { console.log('saved'); console.log(resource) },
+      value: resource => {
+        this.setState({documentIri: resource.value, saving: false});
+      },
       error: error => { console.log('error'); console.log(error) },
     });
   }

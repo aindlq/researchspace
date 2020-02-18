@@ -24,6 +24,7 @@ import * as uri from 'urijs';
 import * as Maybe from 'data.maybe';
 
 import { Rdf } from 'platform/api/rdf';
+import { trigger } from 'platform/api/events';
 import { SparqlUtil } from 'platform/api/sparql';
 import { getPrefixedUri, getFullIri } from 'platform/api/services/namespace';
 import { ConfigHolder } from 'platform/api/services/config-holder';
@@ -122,9 +123,55 @@ export function getCurrentUrl(): uri.URI {
 export function navigateToResource(
   iri: Rdf.Iri, props?: {}, repository?: string, fragment?: string,
 ): Kefir.Property<void> {
-  return constructUrlForResource(iri, props, repository, fragment).flatMap(
-    navigateToUrl
-  ).toProperty();
+  // TODO think about proper way to change navigation in frames
+  if (window['inFrames']) {
+    if (iri.value.startsWith('http://www.researchspace.org/instances/narratives')) {
+      trigger({
+        eventType: 'Dashboard.AddFrame',
+        source: 'link',
+        targets: ['thinking-frames'],
+        data: {
+          resourceIri: iri.value,
+          viewId: 'semantic-narrative'
+        }
+      });
+    } else if (iri.value === 'http://www.researchspace.org/resource/ThinkingFrames' && props && props['viewId']) {
+      trigger({
+        eventType: 'Dashboard.AddFrame',
+        source: 'link',
+        targets: ['thinking-frames'],
+        data: {
+          resourceIri: props['resourceIri'],
+          viewId: props['viewId']
+        }
+      });
+    } else if (iri.value === 'http://www.researchspace.org/resource/ThinkingFrames') {
+      trigger({
+        eventType: 'Dashboard.AddFrame',
+        source: 'link',
+        targets: ['thinking-frames'],
+      });
+    } else if (!iri.value.startsWith('http://www.researchspace.org/resource/')) {
+      trigger({
+        eventType: 'Dashboard.AddFrame',
+        source: 'link',
+        targets: ['thinking-frames'],
+        data: {
+          resourceIri: iri.value,
+          viewId: 'resource'
+        }
+      });
+    } else {
+      return constructUrlForResource(iri, props, repository, fragment).flatMap(
+        navigateToUrl
+      ).toProperty();
+    }
+    return Kefir.constant(null);
+  } else {
+    return constructUrlForResource(iri, props, repository, fragment).flatMap(
+      navigateToUrl
+    ).toProperty();
+  }
 }
 
 /**
