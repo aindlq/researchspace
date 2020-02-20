@@ -118,6 +118,8 @@ export class OverlayComparison extends KefirComponentBase<Props, State, LoadedSt
           },
         }),
         D.span({className: b('image-label').toString() }, 'Second image'),
+        /*
+         * TODO temporary disable overlay creation
         D.button({
           type: 'button',
           className: classNames('btn', 'btn-default', b('submit').toString()),
@@ -136,6 +138,7 @@ export class OverlayComparison extends KefirComponentBase<Props, State, LoadedSt
             );
           },
         }, 'Create overlayed image')
+        */
       ),
       D.div(
         {className: b('image-container').toString() },
