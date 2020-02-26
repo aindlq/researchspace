@@ -96,29 +96,19 @@ public class KnowledgePatternsEndpoint {
     @Path("/getAllKps")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAllKps() {
-    	 Map<IRI, FieldDefinition> fields = fieldDefinitionManager.queryAllFieldDefinitions();
-
+        Map<IRI, FieldDefinition> fields = fieldDefinitionManager.queryAllFieldDefinitions();
+    	Map<IRI, Optional<Literal>> labels = labelCache.getLabels(fields.keySet(), repositoryManager.getAssetRepository(), null);
+    	 
         Map<String, Object> jsonDefinitions = new HashMap<String, Object>();
         for (Map.Entry<IRI, FieldDefinition> entry : fields.entrySet()) {
             FieldDefinition field = entry.getValue();
             Map<String, Object> json = fieldDefinitionManager.jsonFromField(field);
             json.put("id", entry.getKey().stringValue());
-            String fieldLabel = this.getFieldDefinitionLabel(field.getIri().stringValue());
+            String fieldLabel = LabelCache.resolveLabelWithFallback(labels.get(field.getIri()), field.getIri());
             json.put("label", fieldLabel);
             jsonDefinitions.put(field.getIri().stringValue(), json);
         }
     	
     	return Response.ok().entity(jsonDefinitions).build();
     }
-    
-    private String getFieldDefinitionLabel(String fieldIriValue) {
-        ValueFactory vf = SimpleValueFactory.getInstance();
-        IRI fieldIri = vf.createIRI(fieldIriValue);
-
-        Optional<Literal> label = labelCache.getLabel(
-            fieldIri, repositoryManager.getAssetRepository(), null
-        );
-        return LabelCache.resolveLabelWithFallback(label, fieldIri);
-    }
-
 }

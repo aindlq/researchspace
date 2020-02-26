@@ -186,7 +186,7 @@ public class FieldDefinitionManager implements PlatformCache {
             "\n  ?iri field:treePatterns ?treePatterns ." +
             "\n} WHERE {" +
             "\n  " + valuesClause +
-            "\n  <" + FieldDefinitionContainer.IRI_STRING + "> ldp:contains ?field ." +
+            "\n  <" + FieldDefinitionContainer.IRI_STRING + "> ldp:contains ?iri ." +
             "\n  ?iri a field:Field ." +
             "\n  OPTIONAL { ?iri rdfs:comment ?description }" +
             "\n  OPTIONAL { ?iri field:minOccurs ?minOccurs }" +
