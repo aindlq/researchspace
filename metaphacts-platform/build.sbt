@@ -24,6 +24,7 @@ version := platformVersion
 licenses += "LGPL 2.1" -> url("http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html")
 
 resolvers += Resolver.mavenLocal
+resolvers += "Github" at "https://maven.pkg.github.com/aindlq/researchspace"
 credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
 
 
