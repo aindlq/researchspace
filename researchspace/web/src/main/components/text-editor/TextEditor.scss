@@ -234,4 +234,9 @@ $editorWidth: 794px;
     display: flex;
     margin-left: -1px;
   }
+
+  // see https://github.com/ianstormtaylor/slate/issues/2302
+  [data-slate-void='true'], [data-slate-spacer="true"]{
+    position: relative!important
+  }
 }
