@@ -180,6 +180,9 @@ object dependencies {
     //jersey
     "javax.ws.rs" % "javax.ws.rs-api" % "2.0.1" % "provided",
 
+    // needed to prevent exception in Java > 8
+    "javax.activation" % "activation" % "1.1.1",
+
     //jersey-guice integration
     "org.glassfish.hk2" % "guice-bridge" % "2.4.0-b34",
 
