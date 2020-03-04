@@ -1594,6 +1594,7 @@ BIND(COALESCE(?engLabel, ?noLangLabel, REPLACE(STR(?parent), "^.*/(.*)$", "$1"))
 
   private static ROOTS_CLASS_QUERY = Sparql`
 SELECT distinct ?item ?label ?hasChildren where {
+BIND(?baseItem as ?item) .
 OPTIONAL { ?item rdfs:subClassOf ?superClass. }
 FILTER(!BOUND(?superClass))
 OPTIONAL {
@@ -1618,6 +1619,7 @@ BIND(REPLACE(STR(?item), "^http://www.cidoc-crm.org/cidoc-crm/E(\\d*).*$", "$1")
 
   private static CHILDREN_CLASS_QUERY = Sparql`
 select distinct ?item ?label ?hasChildren where {
+  BIND(?baseItem as ?item) .
   ?item rdfs:subClassOf ?parent .
 
   OPTIONAL {
@@ -1642,6 +1644,7 @@ BIND(REPLACE(STR(?item), "^http://www.cidoc-crm.org/cidoc-crm/E(\\d*).*$", "$1")
 
   private static SEARCH_CLASS_QUERY = Sparql`
 select distinct ?item ?label ?hasChildren ?score where {
+?item rdfs:subClassOf* ?baseItem .
 OPTIONAL {
 ?other rdfs:subClassOf ?item.
 BIND(true AS ?hasChildren)
@@ -1684,48 +1687,30 @@ BIND(IF(?maybePNumber = STR(?parent), 999, STRDT(?maybePNumber, xsd:integer)) as
 
 
   private renderClassSelector = (options: ClassSelectorOptions) => {
-    const links = options.values.map(c => ({item: Rdf.iri(c)}));
+    const types = options.values.map(c => ({baseItem: Rdf.iri(c)}));
 
-    // ugly hack to check in the query if hasChlidren is in the same list
-    const other = options.values.map(c => ({other: Rdf.iri(c)}));
     const initialSelection = options.value !== 'http://ontodia.org/NewEntity' ? [Rdf.iri(options.value)] : [];
 
     const rootsQuery =
       SparqlUtil.serializeQuery(
         SparqlClient.prepareParsedQuery(
-          links
+          types
         )(
-          SparqlClient.prepareParsedQuery(
-            other
-          )(
-            Ontodia.ROOTS_CLASS_QUERY
-          )
+          Ontodia.ROOTS_CLASS_QUERY
         )
       );
 
     const childrenQuery =
       SparqlUtil.serializeQuery(
-        SparqlClient.prepareParsedQuery(
-          links
-        )(
-          SparqlClient.prepareParsedQuery(
-            other
-          )(
-            Ontodia.CHILDREN_CLASS_QUERY
-          )
-        )
+        Ontodia.CHILDREN_CLASS_QUERY
       );
 
     const searchQuery =
       SparqlUtil.serializeQuery(
         SparqlClient.prepareParsedQuery(
-          links
+          types
         )(
-          SparqlClient.prepareParsedQuery(
-            other
-          )(
-            Ontodia.SEARCH_CLASS_QUERY
-          )
+          Ontodia.SEARCH_CLASS_QUERY
         )
       );
 
@@ -1748,9 +1733,7 @@ BIND(IF(?maybePNumber = STR(?parent), 999, STRDT(?maybePNumber, xsd:integer)) as
         onSelectionChanged: (selection) => {
           const iri = TreeSelection.leafs(selection).first()?.iri?.value;
           if (iri) {
-            options.onChange(
-              options.values.find(link => link === iri)
-            );
+            options.onChange(iri as ElementTypeIri);
           }
         },
         additionalItemTemplate: this.props.additionalTreeItemTemplate,
