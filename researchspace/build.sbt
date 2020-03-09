@@ -15,4 +15,5 @@ libraryDependencies ++= Seq(
   "com.twelvemonkeys.imageio" % "imageio-tiff" % "3.2.1",
   "com.twelvemonkeys.imageio" % "imageio-core" % "3.2.1"
 )
-credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
+
+resolvers += Resolver.bintrayRepo("researchspace", "public")

@@ -62,6 +62,4 @@ lazy val platform = (project in file("."))
 version := platformVersion
 licenseFile := licenseBundleOptions.licenseFile
 
-resolvers += Resolver.mavenLocal
-resolvers += "Github" at "https://maven.pkg.github.com/aindlq/researchspace"
-credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
+resolvers += Resolver.bintrayRepo("researchspace", "public")
