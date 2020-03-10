@@ -27,6 +27,10 @@ import { Block, MARK, Inline, RESOURCE_MIME_TYPE } from './EditorSchema';
 export const SLATE_RULES: Rule[] = [
   {
     deserialize(el, next) {
+      if (el.nodeType === Node.TEXT_NODE && el.textContent.match(/^\s*$/)) {
+        return null;
+      }
+
       if (el.nodeType === Node.ELEMENT_NODE) {
         const tagName = el.tagName.toLowerCase();
 
@@ -97,6 +101,12 @@ export const SLATE_RULES: Rule[] = [
         }
       }
     },
+  }, {
+    serialize(obj, children) {
+      if ((obj.object === 'mark' && obj.type === 'rs-annotation-range') || (obj.type === 'rs-annotation-point')) {
+        return React.createElement(React.Fragment, {}, children);
+      }
+    }
   },
 ];
 

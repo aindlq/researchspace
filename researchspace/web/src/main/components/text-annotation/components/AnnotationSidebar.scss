@@ -16,10 +16,7 @@
  * of the GNU Lesser General Public License from http://www.gnu.org/
  */
 
-.component {
-  display: flex;
-  flex-direction: column;
-}
+.component {/**/}
 
 .tabHeader {
   :global(.badge) {
@@ -30,6 +27,7 @@
 .tabIcon {
   height: 20px;
   margin-right: 5px;
+  opacity: 0.5;
 }
 
 .annotationList {
@@ -37,7 +35,7 @@
   display: flex;
   flex-direction: column;
   padding-right: 10px;
-  overflow-y: scroll;
+  overflow-y: auto;
 }
 
 $focusOffset: 5px;

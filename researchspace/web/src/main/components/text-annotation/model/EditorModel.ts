@@ -405,34 +405,6 @@ function mapAnnotations(
   return mapNode(doc) as Slate.Document;
 }
 
-export function createDecorationsForRange(
-  doc: Slate.Document, range: Slate.Range, markType: string
-): Immutable.List<Slate.Decoration> {
-  // split range into separate decoration fro each text to avoid
-  // marking the whole block when selection crosses block boundaries
-  return doc.getTextsAtRange(range).map(text => {
-    if (range.start.isInNode(text) || range.end.isInNode(text)) {
-      return Slate.Decoration.create({
-        anchor: range.start.isInNode(text)
-          ? range.start
-          : range.start.moveToStartOfNode(text).normalize(doc),
-        focus: range.end.isInNode(text)
-          ? range.end
-          : range.end.moveToEndOfNode(text).normalize(doc),
-        mark: Slate.Mark.create({type: markType}),
-      });
-    } else {
-      const path = doc.getPath(text.key);
-      const start = Slate.Point.create({key: text.key, path, offset: 0});
-      return Slate.Decoration.create({
-        anchor: start,
-        focus: start.moveToEndOfNode(text).normalize(doc),
-        mark: Slate.Mark.create({type: markType}),
-      });
-    }
-  });
-}
-
 export function setValueProps(value: Slate.Value, props: {
   document?: Slate.Document;
   selection?: Slate.Selection;

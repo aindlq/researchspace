@@ -163,6 +163,7 @@ export interface PointSelector {
 
 export function createRangeTarget(params: {
   source: Rdf.Iri;
+  target?: Rdf.Iri;
   selector: RangeSelector;
   selectedText?: string;
 }): Forms.CompositeValue {
@@ -189,11 +190,12 @@ export function createRangeTarget(params: {
         },
       ])
     },
-  ]);
+  ], params.target);
 }
 
 export function createPointTarget(params: {
   source: Rdf.Iri;
+  target?: Rdf.Iri;
   selector: PointSelector;
 }): Forms.CompositeValue {
   const {source, selector} = params;
@@ -203,7 +205,7 @@ export function createPointTarget(params: {
       def: OAHasSelector,
       value: makeSelector(params.source, selector.xPath, selector.offset),
     },
-  ]);
+  ], params.target);
 }
 
 export function createProvenanceEvent(params: {
@@ -246,7 +248,8 @@ function makeComposite(
   fields: ReadonlyArray<{
     def: Forms.FieldDefinition;
     value: Forms.FieldValue | ReadonlyArray<Forms.FieldValue>;
-  }>
+  }>,
+  iri?: Rdf.Iri
 ): Forms.CompositeValue {
   const composite: Forms.CompositeValue = {
     type: Forms.CompositeValue.type,
@@ -262,7 +265,7 @@ function makeComposite(
     errors: Forms.FieldError.noErrors,
   };
   return Forms.CompositeValue.set(composite, {
-    subject: Forms.generateSubjectByTemplate(subjectTemplate, ownerIri, composite),
+    subject: iri || Forms.generateSubjectByTemplate(subjectTemplate, ownerIri, composite),
   });
 }
 
@@ -292,6 +295,7 @@ export interface Annotation {
   readonly selectedText?: string;
   readonly bodyType?: Rdf.Iri;
   readonly author?: Rdf.Iri;
+  readonly target?: Rdf.Iri;
 }
 
 export const PLACEHOLDER_ANNOTATION = Rdf.iri('');
@@ -328,10 +332,6 @@ export function fetchAnnotations(
 const ANNOTATION_FRAME = {
   '@context': 'https://www.w3.org/ns/anno.jsonld',
   '@type': 'Annotation',
-  'target': {
-    'source': {'@embed': '@always'},
-    'selector': {}
-  },
 };
 
 function fetchAnnotation(
@@ -352,23 +352,66 @@ function fetchAnnotation(
       useNativeTypes: true
     }))
     .flatMap(doc => JsonLd.frame(doc, ANNOTATION_FRAME, {documentLoader}))
-    .map((framed): Annotation => {
+    .flatMap(framed => {
       // TODO: add strict validation here
       const anno = framed['@graph'][0];
-      const selector = anno.target.selector;
+      console.log('framed annotation')
+      console.log(anno)
+      const targetIri = anno.target;
+      return fetchTarget(targetIri, repository).map(target => {
       const types: string[] = anno.body.type
         ? (Array.isArray(anno.body.type) ? anno.body.type : [anno.body.type])
         : [];
       return {
         iri,
-        selector: selector.type === 'RangeSelector'
-          ? extractRangeSelector(selector)
-          : extractPointSelector(selector),
-        selectedText: typeof anno.target.value === 'string'
-          ? anno.target.value : undefined,
+        selector: target.selector,
+        target: target.iri,
+        selectedText: typeof target.selectedText === 'string' ? target.selectedText : undefined,
         bodyType: selectType(types.map(Rdf.iri)),
         author: typeof anno.carriedOutBy === 'string'
           ? Rdf.iri(anno.carriedOutBy) : undefined,
+      };
+      });
+    })
+    .toProperty();
+}
+
+
+const TARGET_FRAME = {
+  '@context': 'https://www.w3.org/ns/anno.jsonld',
+  'source': {'@embed': '@always'},
+  'selector': {}
+};
+
+interface AnnotationTarget {
+  iri: Rdf.Iri
+  selector: AnnotationSelector
+  selectedText?: string
+}
+function fetchTarget(iri: string, repository: string): Kefir.Property<AnnotationTarget> {
+  const documentLoader = JsonLd.makeDocumentLoader({
+    overrideContexts: {
+      'https://www.w3.org/ns/anno.jsonld': JSONLD_ANNOTATION_CONTEXT,
+    }
+  });
+  const ldp = new LdpService(VocabPlatform.FormContainer.value, {repository});
+  return ldp.getResourceRequest(iri + '/container', 'text/turtle')
+    .flatMap(ttl => JsonLd.fromRdf(ttl, {
+      documentLoader,
+      format: 'text/turtle',
+      useNativeTypes: true
+    }))
+    .flatMap(doc => JsonLd.frame(doc, TARGET_FRAME, {documentLoader}))
+    .map(framed => {
+      const target = framed['@graph'][0];
+      const selector = target.selector;
+      return {
+        iri: Rdf.iri(iri),
+        selector: selector.type === 'RangeSelector'
+          ? extractRangeSelector(selector)
+          : extractPointSelector(selector),
+        selectedText: typeof target.value === 'string'
+          ? target.value : undefined,
       };
     })
     .toProperty();

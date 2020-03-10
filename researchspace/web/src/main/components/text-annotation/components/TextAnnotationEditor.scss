@@ -20,6 +20,8 @@
 
 .textEditor {
   display: flex;
+  justify-content: center;
+  height: 100%;
 }
 
 .addAnnotationSideline {
@@ -29,6 +31,7 @@
 }
 
 .addAnnotationButton {
+  border: none;
   position: absolute;
   margin: -15px 0 0 0;
 
