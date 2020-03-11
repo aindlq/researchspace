@@ -28,6 +28,10 @@ export { ValuePatch, applyValuePatch, computeValuePatch } from './Serialization'
 export * from './inputs';
 export * from './static';
 
+export {
+  GenerateFormFromFieldsParams, InputOverride, InputOverrideTarget, FieldInputElement,
+  generateFormFromFields,
+} from './auto-form/FormGenerator';
 export * from './persistence/PersistenceUtils';
 export * from './persistence/TriplestorePersistence';
 export { LdpPersistence, LdpPersistenceConfig } from './persistence/LdpPersistence';

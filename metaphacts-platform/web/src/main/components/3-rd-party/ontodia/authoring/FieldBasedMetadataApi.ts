@@ -28,7 +28,8 @@ import { SparqlClient, SparqlUtil } from 'platform/api/sparql';
 
 import { generateSubjectByTemplate } from 'platform/components/forms';
 
-import { EntityMetadata, isObjectProperty } from './OntodiaEntityMetadata';
+import { observableToCancellablePromise } from '../AsyncAdapters';
+import { EntityMetadata, isObjectProperty } from './FieldConfigurationCommon';
 import { getEntityMetadata } from './OntodiaPersistenceCommon';
 
 export class FieldBasedMetadataApi implements MetadataApi {
@@ -213,7 +214,7 @@ export class FieldBasedMetadataApi implements MetadataApi {
 export class BaseTypeClosureRequest {
   private static BASE_TYPES_QUERY = SparqlUtil.parseQuerySync<SparqlJs.SelectQuery>(
     'PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n' +
-    'SELECT ?type ?base WHERE { ?type rdfs:subClassOf* ?base }'
+    'SELECT REDUCED ?type ?base WHERE { ?type rdfs:subClassOf* ?base }'
   );
 
   readonly derivedTypes = new Set<ElementTypeIri>();
@@ -262,68 +263,4 @@ export function hasCompatibleType(
     }
   }
   return false;
-}
-
-export function observableToCancellablePromise<T>(
-  observable: Kefir.Observable<T>,
-  ct: CancellationToken
-): Promise<T> {
-  if (ct.aborted) {
-    return Promise.reject(makeCancelledError());
-  }
-  return new Promise<T>((resolve, reject) => {
-    let resolved = false;
-    let observableSubscription: Kefir.Subscription | undefined;
-    let tokenSubscription: (() => void) | undefined;
-
-    const markResolvedAndCleanup = () => {
-      if (resolved) { return; }
-      resolved = true;
-      if (observableSubscription) {
-        observableSubscription.unsubscribe();
-      }
-      if (tokenSubscription) {
-        ct.removeEventListener('abort', tokenSubscription);
-      }
-    };
-
-    observableSubscription = observable.observe({
-      value: value => {
-        if (resolved) { return; }
-        markResolvedAndCleanup();
-        if (ct.aborted) {
-          reject(makeCancelledError());
-          return;
-        }
-        resolve(value);
-      },
-      error: error => {
-        if (resolved) { return; }
-        markResolvedAndCleanup();
-        if (ct.aborted) {
-          reject(makeCancelledError());
-          return;
-        }
-        reject(error);
-      },
-      end: () => {
-        if (resolved) { return; }
-        markResolvedAndCleanup();
-        reject(new Error('Observable ended without producing a value or an error'));
-      }
-    });
-
-    if (!resolved) {
-      if (ct.aborted) {
-        markResolvedAndCleanup();
-      } else {
-        tokenSubscription = () => markResolvedAndCleanup();
-        ct.addEventListener('abort', tokenSubscription);
-      }
-    }
-  });
-}
-
-function makeCancelledError() {
-  return new Error('The operation was cancelled');
 }

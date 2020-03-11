@@ -17,7 +17,7 @@
  */
 
 import {
-  ClassAttributes, Component as ReactComponent, Children, cloneElement, createElement
+  ClassAttributes, Component as ReactComponent, ReactElement, Children, cloneElement, createElement
 } from 'react';
 import * as Kefir from 'kefir';
 import * as _ from 'lodash';
@@ -43,7 +43,6 @@ import {
   LinkTemplate,
   LinkTypeOptions,
   ElementIri,
-  ElementTypeIri,
   PropertyEditorOptions,
   LinkSelectorOptions,
   PropertySuggestionParams,
@@ -64,6 +63,8 @@ import {
   LinkModel,
   LinkTypeIri,
   ClassSelectorOptions,
+  CancellationToken,
+  ElementTypeIri,
 } from 'ontodia';
 import * as URI from 'urijs';
 
@@ -80,7 +81,7 @@ import {
   isSimpleClick,
 } from 'platform/api/navigation/components/ResourceLink';
 
-import { FieldDefinition, CompositeValue } from 'platform/components/forms';
+import * as Forms from 'platform/components/forms';
 import { CreateResourceDialog } from 'platform/components/ldp';
 import { addToDefaultSet } from 'platform/api/services/ldp-set';
 import { getOverlaySystem } from 'platform/components/ui/overlay';
@@ -92,6 +93,7 @@ import { getPreferredUserLanguage, selectPreferredLabel } from 'platform/api/ser
 import { ConfigHolder } from 'platform/api/services/config-holder';
 import { getLabels } from 'platform/api/services/resource-label';
 import { SemanticTreeInput, TreeSelection } from 'platform/components/semantic/lazy-tree';
+import { componentHasType } from 'platform/components/utils';
 
 import { OntodiaExtension, OntodiaFactory } from './extensions';
 
@@ -106,7 +108,10 @@ import { Toolbar } from './Toolbar';
 import { EntityForm, EntityFormProps } from './authoring/EntityForm';
 import { FieldBasedMetadataApi } from './authoring/FieldBasedMetadataApi';
 import { FieldBasedValidationApi } from './authoring/FieldBasedValidationApi';
-import { EntityMetadata, extractAuthoringMetadata } from './authoring/OntodiaEntityMetadata';
+import { FieldConfiguration, isObjectProperty } from './authoring/FieldConfigurationCommon';
+import {
+  OntodiaFieldConfiguration, OntodiaFieldConfigurationProps, extractFieldConfiguration,
+} from './authoring/OntodiaFieldConfiguration';
 import {
   OntodiaPersistenceResult, OntologyPersistenceProps
 } from './authoring/OntodiaPersistence';
@@ -115,6 +120,7 @@ import {
 } from './authoring/OntodiaPersistenceCommon';
 import { FormBasedPersistence, FormBasedPersistenceProps } from './authoring/FormBasedPersistence';
 
+import { deriveCancellationToken } from './AsyncAdapters';
 import * as OntodiaEvents from './OntodiaEvents';
 import { SparqlClient, SparqlUtil } from 'platform/api/sparql';
 import { Sparql } from 'platform/api/sparql/SparqlUtil';
@@ -322,20 +328,6 @@ export interface OntodiaConfig {
   persistChangesLabel?: string;
 
   /**
-   * Switches Ondodia to authoring mode.
-   *
-   * Authoring mode requires entity metadata to be specified (using semantic forms as children)
-   * in order to work.
-   */
-  authoringMode?: boolean;
-
-  /**
-   * Defines persistence mode to use in authoring mode.
-   * @default {"type": "form"}
-   */
-  persistence?: OntodiaPersistenceMode;
-
-  /**
    * Sparql query to find a relationship between two elements.
    */
   findRelationshipQuery?: string;
@@ -371,6 +363,7 @@ export interface OntodiaProps extends OntodiaConfig, ClassAttributes<Ontodia> {
 
 interface State {
   readonly label?: string;
+  readonly fieldConfiguration?: FieldConfiguration;
   readonly configurationError?: any;
   readonly diagramIri?: string;
 }
@@ -493,9 +486,6 @@ export class Ontodia extends Component<OntodiaProps, State> {
   private readonly cancellation = new Cancellation();
   private readonly listener = new EventObserver();
 
-  private allFields: ReadonlyArray<FieldDefinition>;
-  private forceFields: ReadonlyMap<string, FieldDefinition>;
-  private entityMetadata: Map<ElementTypeIri, EntityMetadata>;
   private metadataApi: FieldBasedMetadataApi;
   private validationApi: FieldBasedValidationApi;
   private parsedMetadata: Kefir.Property<ReadonlyArray<Rdf.Triple>>;
@@ -510,39 +500,11 @@ export class Ontodia extends Component<OntodiaProps, State> {
   constructor(props: OntodiaProps, context: any) {
     super(props, context);
 
-    let entityMetadata: Map<ElementTypeIri, EntityMetadata> | undefined;
-    let configurationError: unknown;
-    try {
-      entityMetadata = extractAuthoringMetadata(
-        Children.toArray(this.props.children).filter(isValidChild)
-      );
-    } catch (err) {
-      configurationError = err;
-    }
-
     this.state = {
       diagramIri: props.diagram,
-      configurationError,
     };
 
-    if (entityMetadata && entityMetadata.size > 0) {
-      const allFields = new Map<string, FieldDefinition>();
-      const forceFields = new Map<string, FieldDefinition>();
-      entityMetadata.forEach(metadata => {
-        metadata.fieldByIri.forEach(f => allFields.set(f.iri, f));
-        metadata.forceFields.forEach(f => forceFields.set(f.iri, f));
-      });
-
-      this.entityMetadata = entityMetadata;
-      this.allFields = Array.from(allFields.values());
-      this.forceFields = forceFields;
-
-      if (this.props.authoringMode) {
-        this.metadataApi = new FieldBasedMetadataApi(this.entityMetadata);
-        this.validationApi = new FieldBasedValidationApi(this.entityMetadata);
-      }
-    }
-
+    this.loadFieldConfiguration(deriveCancellationToken(this.cancellation));
     this.parsedMetadata = this.parseMetadata();
     this.prepareElementTemplates();
   }
@@ -554,13 +516,40 @@ export class Ontodia extends Component<OntodiaProps, State> {
     }
   }
 
-  render() {
-    if (OntodiaExtension.isLoading()) {
-      return createElement(Spinner, {});
+  private async loadFieldConfiguration(ct: CancellationToken) {
+    const fieldConfigElement = Children.toArray(this.props.children).find(
+      child => componentHasType(child, OntodiaFieldConfiguration)
+    ) as ReactElement<OntodiaFieldConfigurationProps>;
+
+    let fieldConfiguration: FieldConfiguration | undefined;
+    let configurationError: unknown;
+    try {
+      fieldConfiguration = await extractFieldConfiguration(
+        fieldConfigElement ? fieldConfigElement.props : undefined, ct
+      );
+    } catch (err) {
+      // err also could be a CancellationError
+      configurationError = err;
     }
 
+    if (!ct.aborted) {
+      if (fieldConfiguration) {
+        if (fieldConfiguration.authoringMode) {
+          this.metadataApi = new FieldBasedMetadataApi(fieldConfiguration.metadata);
+          this.validationApi = new FieldBasedValidationApi(fieldConfiguration.metadata);
+        }
+        this.setState({fieldConfiguration});
+      } else {
+        this.setState({configurationError});
+      }
+    }
+  }
+
+  render() {
     if (this.state.configurationError) {
       return createElement(ErrorNotification, {errorMessage: this.state.configurationError});
+    } else if (OntodiaExtension.isLoading() || !this.state.fieldConfiguration) {
+      return createElement(Spinner, {});
     }
 
     const preferredLanguage = getPreferredUserLanguage();
@@ -569,12 +558,13 @@ export class Ontodia extends Component<OntodiaProps, State> {
     });
 
     const {
-      readonly, groupBy, authoringMode, hidePanels, hideNavigator,
+      readonly, groupBy, hidePanels, hideNavigator,
       collapseNavigator, hideToolbar, hideHalo, hideScrollBars,
       saveDiagramLabel, persistChangesLabel, propertySuggestionQuery,
       zoomRequireCtrl, nodeStyles,
       leftPanelInitiallyOpen, rightPanelInitiallyOpen,
     } = this.props;
+    const {fieldConfiguration} = this.state;
 
     const {createWorkspace, createToolbar} = OntodiaExtension.get() || DEFAULT_FACTORY;
     const props: WorkspaceProps & ClassAttributes<Workspace> = {
@@ -584,7 +574,8 @@ export class Ontodia extends Component<OntodiaProps, State> {
         : [{code: preferredLanguage, label: preferredLanguage}],
       language: preferredLanguage,
       onSaveDiagram: readonly ? undefined : this.onSaveDiagramPressed,
-      onPersistChanges: authoringMode ? this.onPersistAuthoredChanges : undefined,
+      onPersistChanges: fieldConfiguration.authoringMode
+        ? this.onPersistAuthoredChanges : undefined,
       leftPanelInitiallyOpen: readonly ? false : leftPanelInitiallyOpen,
       rightPanelInitiallyOpen: readonly ? false : rightPanelInitiallyOpen,
       toolbar: createToolbar(this.props, {
@@ -718,9 +709,10 @@ export class Ontodia extends Component<OntodiaProps, State> {
     if (workspace) {
       const {
         onLoadWorkspace, imageIris, provisionQuery, acceptBlankNodes,
-        settings: configName, autoZoom, hideNavigationConfirmation, authoringMode,
+        settings: configName, autoZoom, hideNavigationConfirmation,
         imageQuery,
       } = this.props;
+      const {fieldConfiguration} = this.state;
 
       this.workspace = workspace;
       if (onLoadWorkspace) {
@@ -743,9 +735,9 @@ export class Ontodia extends Component<OntodiaProps, State> {
         options,
         repositories,
         createRDFStorage: provisionQuery !== undefined,
-        fields: this.allFields,
+        fields: fieldConfiguration.allFields,
         settings: this.props.providerSettings,
-        forceFields: this.forceFields,
+        forceFields: fieldConfiguration.datatypeFields,
       });
       if (this.validationApi) {
         this.validationApi.setDataProvider(this.dataProvider);
@@ -764,7 +756,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
       }
 
       this.subscribeOnEvents();
-      if (authoringMode) {
+      if (fieldConfiguration.authoringMode) {
         this.subscribeOnAuthoringEvents();
       }
     }
@@ -986,7 +978,8 @@ export class Ontodia extends Component<OntodiaProps, State> {
   }
 
   private persistAuthoredChanges(): Promise<void> {
-    const persistence = makePersistenceFromConfig(this.props.persistence);
+    const {fieldConfiguration} = this.state;
+    const persistence = makePersistenceFromConfig(fieldConfiguration.persistence);
     const model = this.workspace.getModel();
     const editor = this.workspace.getEditor();
 
@@ -1004,7 +997,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
     };
 
     return persistence.persist({
-      entityMetadata: this.entityMetadata,
+      entityMetadata: fieldConfiguration.metadata,
       state: editor.authoringState,
       fetchModel,
     }).map(this.onChangesPersisted).toPromise();
@@ -1214,29 +1207,31 @@ export class Ontodia extends Component<OntodiaProps, State> {
   }
 
   private renderPropertyEditor = (options: PropertyEditorOptions) => {
-    const {elementData} = options;
-    const metadata = getEntityMetadata(elementData, this.entityMetadata);
+    const {fieldConfiguration} = this.state;
+    const metadata = getEntityMetadata(options.elementData, fieldConfiguration.metadata);
     const authoringState = this.workspace.getEditor().authoringState;
 
     if (metadata) {
-      let rawModel = convertElementModelToCompositeValue(elementData, metadata);
+      let rawModel = convertElementModelToCompositeValue(options.elementData, metadata);
       const elementState = authoringState.elements.get(rawModel.subject.value as ElementIri);
 
-      const isNewElement =
-        elementState && elementState.type === AuthoringKind.ChangeElement && !elementState.before;
-      const elementHasNewIri = elementState &&
-        elementState.type === AuthoringKind.ChangeElement &&
-        elementState.newIri;
+      let isNewElement = false;
+      let elementNewIri: ElementIri | undefined;
+      if (elementState && elementState.type === AuthoringKind.ChangeElement) {
+        isNewElement = !elementState.before;
+        elementNewIri = elementState.newIri;
+      }
 
-      let model: CompositeValue = {
+      const model: Forms.CompositeValue = {
         ...rawModel,
-        subject: elementHasNewIri ? new Rdf.Iri((elementState as any).newIri) : rawModel.subject,
+        subject: typeof elementNewIri === 'string'
+          ? Rdf.iri(elementNewIri) : rawModel.subject,
       };
 
-      const persistence = makePersistenceFromConfig(this.props.persistence);
+      const persistence = makePersistenceFromConfig(fieldConfiguration.persistence);
       const props: EntityFormProps = {
         acceptIriAuthoring: isNewElement || persistence.supportsIriEditing,
-        fields: metadata.fieldById.toArray(),
+        fields: metadata.fieldByIri.toArray(),
         newSubjectTemplate: metadata.newSubjectTemplate,
         model,
         suggestIri: isNewElement ? true : undefined,
@@ -1246,11 +1241,15 @@ export class Ontodia extends Component<OntodiaProps, State> {
         },
         onCancel: () => options.onCancel && options.onCancel(),
       };
-      return createElement(EntityForm, props, metadata.formChildren);
+      const formBody = metadata.formChildren || Forms.generateFormFromFields({
+        fields: metadata.fields.filter(f => !isObjectProperty(f, metadata)),
+        overrides: fieldConfiguration.inputOverrides,
+      });
+      return createElement(EntityForm, props, formBody);
     } else {
       return createElement(ErrorNotification, {
         errorMessage: `<ontodia-entity-metadata> is not defined for the ` +
-          `'${elementData.types.join(', ')}' types`,
+          `'${options.elementData.types.join(', ')}' types`,
       });
     }
   }
@@ -1312,7 +1311,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
   }
 
   private getElementTemplate = (template: string): ElementTemplate => {
-    const inAuthoringMode = () => this.props.authoringMode;
+    const inAuthoringMode = () => this.state.fieldConfiguration.authoringMode;
     return class extends ReactComponent<TemplateProps, {}> {
       render() {
         if (inAuthoringMode()) {

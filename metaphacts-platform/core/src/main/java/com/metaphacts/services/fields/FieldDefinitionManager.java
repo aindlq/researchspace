@@ -59,9 +59,9 @@ import com.metaphacts.vocabulary.FIELDS;
 import com.metaphacts.vocabulary.XsdUtils;
 
 public class FieldDefinitionManager implements PlatformCache {
-    
+
     public static final String CACHE_ID = "repository.FieldDefinitionManager";
-    
+
     private static final Logger logger = LogManager.getLogger(FieldDefinitionManager.class);
 
     private final RepositoryManager repositoryManager;
