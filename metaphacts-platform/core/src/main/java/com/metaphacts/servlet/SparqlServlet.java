@@ -61,6 +61,7 @@ import org.eclipse.rdf4j.rio.RDFHandler;
 import org.eclipse.rdf4j.rio.RDFWriter;
 import org.eclipse.rdf4j.rio.RDFWriterFactory;
 import org.eclipse.rdf4j.rio.RDFWriterRegistry;
+import org.eclipse.rdf4j.rio.helpers.BasicWriterSettings;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
@@ -374,9 +375,11 @@ public class SparqlServlet extends HttpServlet {
         //writer.handleNamespace(prefix, uri);
     }
 
-    private void addNamespaces(RDFHandler handler) {
-        /// TODO get and iterate of namespaces from registry
-        //handler.handleNamespace(prefix, uri);
+    private void addNamespaces(RDFWriter handler) {
+        nsRegistry.getRioNamespaces().stream().forEach(
+            namespace -> handler.handleNamespace(namespace.getPrefix(), namespace.getName())
+        );
+        handler.set(BasicWriterSettings.PRETTY_PRINT, true);
     }
 
     /**
