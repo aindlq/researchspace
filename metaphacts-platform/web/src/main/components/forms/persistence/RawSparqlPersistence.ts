@@ -24,12 +24,13 @@ import { Rdf } from 'platform/api/rdf';
 import { SparqlClient, SparqlUtil } from 'platform/api/sparql';
 
 import { CompositeValue, EmptyValue } from '../FieldValues';
-import { parseQueryStringAsUpdateOperation } from './PersistenceUtils';
+import { parseQueryStringAsUpdateOperation, withNamedGraph } from './PersistenceUtils';
 import { TriplestorePersistence, computeModelDiff } from './TriplestorePersistence';
 
 export interface RawSparqlPersistenceConfig {
   type?: 'client-side-sparql';
   repository?: string;
+  targetGraphIri?: string;
 }
 
 export class RawSparqlPersistence implements TriplestorePersistence {
@@ -37,9 +38,12 @@ export class RawSparqlPersistence implements TriplestorePersistence {
 
   persist(
     initialModel: CompositeValue | EmptyValue,
-    currentModel: CompositeValue | EmptyValue,
+    currentModel: CompositeValue | EmptyValue
   ): Kefir.Property<void> {
-    const updateQueries = RawSparqlPersistence.createFormUpdateQueries(initialModel, currentModel);
+    const updateQueries =
+      RawSparqlPersistence.createFormUpdateQueries(
+        initialModel, currentModel, this.config.targetGraphIri
+      );
     if (updateQueries.size === 0) {
       return Kefir.constant<void>(undefined);
     }
@@ -56,13 +60,20 @@ export class RawSparqlPersistence implements TriplestorePersistence {
   static createFormUpdateQueries(
     initialModel: CompositeValue | EmptyValue,
     currentModel: CompositeValue | EmptyValue,
+    targetGraphIri?: string
   ): Immutable.List<SparqlJs.Update> {
     const entries = computeModelDiff(initialModel, currentModel);
     return Immutable.List(entries)
       .filter(({definition}) => Boolean(definition.insertPattern && definition.deletePattern))
       .map(({definition, subject, inserted, deleted}) => {
-        const deleteQuery = parseQueryStringAsUpdateOperation(definition.deletePattern);
-        const insertQuery = parseQueryStringAsUpdateOperation(definition.insertPattern);
+        const deleteQuery =
+          withNamedGraph(
+            parseQueryStringAsUpdateOperation(definition.deletePattern), targetGraphIri
+          );
+        const insertQuery =
+          withNamedGraph(
+            parseQueryStringAsUpdateOperation(definition.insertPattern), targetGraphIri
+          );
         return createFieldUpdateQueries(subject, deleteQuery, insertQuery, inserted, deleted);
       }).filter(update => update.size > 0).flatten().toList();
   }

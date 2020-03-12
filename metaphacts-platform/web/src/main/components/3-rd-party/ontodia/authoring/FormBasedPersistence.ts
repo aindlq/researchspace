@@ -22,7 +22,7 @@ import { ElementIri, ElementTypeIri, ElementModel, AuthoringState, ElementChange
 import { Rdf } from 'platform/api/rdf';
 
 import {
-  CompositeValue, EmptyValue, FieldState, FieldValue, LdpPersistence, computeValuePatch
+  CompositeValue, EmptyValue, FieldState, FieldValue, LdpPersistence, computeValuePatch, TriplestorePersistence
 } from 'platform/components/forms';
 
 import { EntityMetadata, isObjectProperty } from './FieldConfigurationCommon';
@@ -33,21 +33,38 @@ import {
   fetchInitialModel, getEntityMetadata, convertElementModelToCompositeValue,
   convertCompositeValueToElementModel, applyEventsToCompositeValue
 } from './OntodiaPersistenceCommon';
+import { SparqlPersistence } from 'platform/components/forms/persistence/SparqlPersistence';
 
-export interface FormBasedPersistenceProps {
+export type FormBasedPersistenceProps =
+  LdpBasedPersistenceProps | SparqlPersistenceProps;
+export interface LdpBasedPersistenceProps {
   readonly type: 'form';
   readonly debug?: boolean;
 }
 
+export interface SparqlPersistenceProps {
+  readonly type: 'sparql';
+  readonly targetGraphIri?: string;
+  readonly debug?: boolean;
+}
+
 export class FormBasedPersistence implements OntodiaPersistence {
-  constructor(private props: FormBasedPersistenceProps) {}
+  constructor(private props: FormBasedPersistenceProps | SparqlPersistenceProps) {}
 
   get supportsIriEditing() {
     return false;
   }
 
   persist(params: OntodiaPersistenceParams): Kefir.Property<OntodiaPersistenceResult> {
-    const formPersistence = new LdpPersistence();
+    let formPersistence: TriplestorePersistence;
+    switch (this.props.type) {
+      case 'form': formPersistence = new LdpPersistence(); break;
+      case 'sparql':
+        formPersistence =
+          new SparqlPersistence({targetGraphIri: this.props.targetGraphIri});
+        break;
+      default: throw new Error('Undefined data persistence type.');
+    }
 
     const {toFetch, changed} = collectEntitiesState(params);
     return fetchEntities(params, toFetch).flatMap(initials => {
