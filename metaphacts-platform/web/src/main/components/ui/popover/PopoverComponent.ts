@@ -34,6 +34,11 @@ export interface Props {
    * If empty/undefined, not title will be visible in the popover.
    */
   title: string;
+
+  /**
+   * CSS class for popover root element.
+   */
+  className?: string;
 }
 
 /**
@@ -47,7 +52,7 @@ export interface Props {
  */
 export class PopoverComponentClass extends Component<Props, {}> {
   render() {
-    const {title} = this.props;
+    const {title, className} = this.props;
 
     const children = Children.toArray(this.props.children);
     const triggerComponent =
@@ -58,7 +63,7 @@ export class PopoverComponentClass extends Component<Props, {}> {
     const triggerChildren = (Children.only(triggerComponent) as ReactElement<any>).props.children;
     const contentChildren = (Children.only(contentComponent)  as ReactElement<any>).props.children;
 
-    const popover = Popover({id: 'mp-popover', title: title}, contentChildren);
+    const popover = Popover({id: 'mp-popover', title: title, className}, contentChildren);
     const trigger = (Children.only(triggerComponent) as ReactElement<any>).props.trigger;
     const placement = (Children.only(triggerComponent) as ReactElement<any>).props.placement;
     const rootClose = (Children.only(triggerComponent) as ReactElement<any>).props.rootClose;
