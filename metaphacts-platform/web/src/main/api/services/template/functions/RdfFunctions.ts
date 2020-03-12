@@ -17,6 +17,7 @@
  */
 
 import { Rdf } from 'platform/api/rdf';
+import { SparqlUtil } from 'platform/api/sparql';
 
 export const RdfFunctions = {
   isIri: function (value: Rdf.Node) {
@@ -30,4 +31,8 @@ export const RdfFunctions = {
   isLiteral: function (value: Rdf.Node) {
     return value.isLiteral();
   },
+
+  compactIri: function (iri: string): string {
+    return SparqlUtil.compactIriUsingPrefix(Rdf.iri(iri));
+  }
 };
