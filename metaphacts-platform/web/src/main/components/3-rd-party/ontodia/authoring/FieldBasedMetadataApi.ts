@@ -22,11 +22,14 @@ import {
   CancellationToken, ElementModel, ElementTypeIri, LinkTypeIri, MetadataApi, PropertyTypeIri,
   LinkModel, ElementIri, LinkDirection,
 } from 'ontodia';
+import * as Immutable from 'immutable';
 
 import { Rdf } from 'platform/api/rdf';
 import { SparqlClient, SparqlUtil } from 'platform/api/sparql';
 
-import { generateSubjectByTemplate } from 'platform/components/forms';
+import {
+  generateSubjectByTemplate, CompositeValue, FieldError, FieldValue,
+} from 'platform/components/forms';
 
 import { observableToCancellablePromise } from '../AsyncAdapters';
 import { EntityMetadata, isObjectProperty } from './FieldConfigurationCommon';
@@ -40,9 +43,11 @@ export class FieldBasedMetadataApi implements MetadataApi {
 
   generateNewElementIri(types: ElementTypeIri[]): Promise<ElementIri> {
     let subjectTemplate: string = undefined;
+    let metadata: EntityMetadata;
+    let typeIri;
     if (types && types.length !== 0) {
-      const typeIri = types[0];
-      const metadata = this.entityMetadata.get(typeIri);
+      typeIri = types[0];
+      metadata = this.entityMetadata.get(typeIri);
       if (metadata) {
         subjectTemplate = metadata.newSubjectTemplate;
       }
@@ -51,7 +56,19 @@ export class FieldBasedMetadataApi implements MetadataApi {
     let newIri: ElementIri;
     const uuid = () => Math.floor((1 + Math.random()) * 0x100000000).toString(16).substring(1);
     if (subjectTemplate) {
-      const filledTemplate = generateSubjectByTemplate(subjectTemplate, undefined, undefined).value;
+      const composite: CompositeValue = {
+        type: CompositeValue.type,
+        subject: Rdf.iri(''),
+        definitions: metadata.fieldByIri,
+        fields: Immutable.Map({
+          [metadata.typeField.id]: {
+            values: Immutable.List([FieldValue.fromLabeled({value: Rdf.iri(typeIri)})]),
+            errors: FieldError.noErrors
+          }
+        }),
+        errors: FieldError.noErrors,
+      };
+      const filledTemplate = generateSubjectByTemplate(subjectTemplate, undefined, composite).value;
       const postfix = subjectTemplate.toLocaleLowerCase().indexOf('{{uuid}}') === -1 ? uuid() : '';
       newIri = `${filledTemplate}${postfix}` as ElementIri;
     } else {
