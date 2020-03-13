@@ -108,7 +108,9 @@ import { Toolbar } from './Toolbar';
 import { EntityForm, EntityFormProps } from './authoring/EntityForm';
 import { FieldBasedMetadataApi } from './authoring/FieldBasedMetadataApi';
 import { FieldBasedValidationApi } from './authoring/FieldBasedValidationApi';
-import { FieldConfiguration, isObjectProperty } from './authoring/FieldConfigurationCommon';
+import {
+  FieldConfiguration, isObjectProperty, OntodiaPersistenceMode,
+} from './authoring/FieldConfigurationCommon';
 import {
   OntodiaFieldConfiguration, OntodiaFieldConfigurationProps, extractFieldConfiguration,
 } from './authoring/OntodiaFieldConfiguration';
@@ -354,9 +356,6 @@ export interface OntodiaConfig {
 
   additionalTreeItemTemplate?: string;
 }
-
-export type OntodiaPersistenceMode =
-  FormBasedPersistenceProps;
 
 export interface OntodiaProps extends OntodiaConfig, ClassAttributes<Ontodia> {
   onLoadWorkspace?: (workspace: Workspace) => void;

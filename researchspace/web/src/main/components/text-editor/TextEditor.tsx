@@ -370,6 +370,7 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
               onChange={this.onChange}
               onSelect={this.props.onSelect}
               plugins={plugins}
+              schema={schema}
             />
           </div>
         </div>

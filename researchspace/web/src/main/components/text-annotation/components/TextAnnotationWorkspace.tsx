@@ -353,6 +353,7 @@ export class TextAnnotationWorkspace extends Component<TextAnnotationWorkspacePr
           content: annotationSidebar,
         }],
         defaultSize: 300,
+        defaultCollapsed: true,
       }]
     };
 

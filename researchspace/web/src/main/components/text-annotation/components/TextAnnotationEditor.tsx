@@ -613,7 +613,16 @@ export function makeIntitialEditorState(params: {
 
 export function makeEmptyEditorState(): TextEditorState {
   return EditorState.create({
-    value: Slate.Value.create(),
+    value: Slate.Value.fromJS({
+      document: {
+        nodes: [
+          {
+            object: 'block' as const,
+            type: Block.empty,
+          },
+        ],
+      }
+    }),
     annotations: []
   });
 }

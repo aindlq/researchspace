@@ -21,7 +21,9 @@ import { WorkspaceProps, Workspace } from 'ontodia';
 import { ExtensionPoint } from 'platform/api/module-loader';
 
 import { OntodiaPersistence } from './authoring/OntodiaPersistence';
-import { OntodiaProps, OntodiaPersistenceMode } from './Ontodia';
+import { OntodiaProps } from './Ontodia';
+import { OntodiaPersistenceMode } from './authoring/FieldConfigurationCommon';
+
 import { ToolbarProps } from './Toolbar';
 
 // Important! This module is an extension point definition or an implementation, so it
