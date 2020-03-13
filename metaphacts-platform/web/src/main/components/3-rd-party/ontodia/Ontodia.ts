@@ -22,6 +22,7 @@ import {
 import * as Kefir from 'kefir';
 import * as _ from 'lodash';
 import * as SparqlJs from 'sparqljs';
+import { debounce } from 'lodash';
 
 import {
   Workspace,
@@ -79,9 +80,7 @@ import {
   isSimpleClick,
 } from 'platform/api/navigation/components/ResourceLink';
 
-import {
-  FieldDefinition, CompositeValue, normalizeFieldDefinition
-} from 'platform/components/forms';
+import { FieldDefinition, CompositeValue } from 'platform/components/forms';
 import { CreateResourceDialog } from 'platform/components/ldp';
 import { addToDefaultSet } from 'platform/api/services/ldp-set';
 import { getOverlaySystem } from 'platform/components/ui/overlay';
@@ -371,7 +370,6 @@ export interface OntodiaProps extends OntodiaConfig, ClassAttributes<Ontodia> {
 }
 
 interface State {
-  readonly loading: boolean;
   readonly label?: string;
   readonly configurationError?: any;
   readonly diagramIri?: string;
@@ -495,7 +493,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
   private readonly cancellation = new Cancellation();
   private readonly listener = new EventObserver();
 
-  private allFields: Dictionary<FieldDefinition>;
+  private allFields: ReadonlyArray<FieldDefinition>;
   private forceFields: ReadonlyMap<string, FieldDefinition>;
   private entityMetadata: Map<ElementTypeIri, EntityMetadata>;
   private metadataApi: FieldBasedMetadataApi;
@@ -512,10 +510,41 @@ export class Ontodia extends Component<OntodiaProps, State> {
   constructor(props: OntodiaProps, context: any) {
     super(props, context);
 
+    let entityMetadata: Map<ElementTypeIri, EntityMetadata> | undefined;
+    let configurationError: unknown;
+    try {
+      entityMetadata = extractAuthoringMetadata(
+        Children.toArray(this.props.children).filter(isValidChild)
+      );
+    } catch (err) {
+      configurationError = err;
+    }
+
     this.state = {
       diagramIri: props.diagram,
-      loading: true,
+      configurationError,
     };
+
+    if (entityMetadata && entityMetadata.size > 0) {
+      const allFields = new Map<string, FieldDefinition>();
+      const forceFields = new Map<string, FieldDefinition>();
+      entityMetadata.forEach(metadata => {
+        metadata.fieldByIri.forEach(f => allFields.set(f.iri, f));
+        metadata.forceFields.forEach(f => forceFields.set(f.iri, f));
+      });
+
+      this.entityMetadata = entityMetadata;
+      this.allFields = Array.from(allFields.values());
+      this.forceFields = forceFields;
+
+      if (this.props.authoringMode) {
+        this.metadataApi = new FieldBasedMetadataApi(this.entityMetadata);
+        this.validationApi = new FieldBasedValidationApi(this.entityMetadata);
+      }
+    }
+
+    this.parsedMetadata = this.parseMetadata();
+    this.prepareElementTemplates();
   }
 
   componentDidUpdate(prevProps: OntodiaProps) {
@@ -526,7 +555,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
   }
 
   render() {
-    if (this.state.loading || OntodiaExtension.isLoading()) {
+    if (OntodiaExtension.isLoading()) {
       return createElement(Spinner, {});
     }
 
@@ -595,57 +624,6 @@ export class Ontodia extends Component<OntodiaProps, State> {
   }
 
   componentDidMount() {
-    if (!window['allFields']) {
-      fetch('/rs/kp/getAllKps')
-        .then(response => response.json())
-        .then(
-          response => {
-            window['allFields'] = _.mapValues(response, normalizeFieldDefinition);
-            this.allFields = window['allFields'];
-          }
-        ).then(
-          () => this.buildMetadata()
-        );
-    } else {
-      this.allFields = window['allFields'];
-      this.buildMetadata()
-    }
-  }
-
-  buildMetadata = () => {
-    let entityMetadata: Map<ElementTypeIri, EntityMetadata> | undefined;
-    let configurationError: unknown;
-    try {
-      entityMetadata = extractAuthoringMetadata(
-        this.allFields,
-        Children.toArray(this.props.children).filter(isValidChild)
-      );
-    } catch (err) {
-      configurationError = err;
-    }
-    if (configurationError) {
-      this.setState({configurationError});
-    }
-
-    if (entityMetadata && entityMetadata.size > 0) {
-      const forceFields = new Map<string, FieldDefinition>();
-      entityMetadata.forEach(metadata => {
-        metadata.forceFields.forEach(f => forceFields.set(f.iri, f));
-      });
-
-      this.entityMetadata = entityMetadata;
-      this.forceFields = forceFields;
-
-      if (this.props.authoringMode) {
-        this.metadataApi = new FieldBasedMetadataApi(this.entityMetadata);
-        this.validationApi = new FieldBasedValidationApi(this.entityMetadata);
-      }
-    }
-
-    this.parsedMetadata = this.parseMetadata();
-    this.prepareElementTemplates();
-    this.setState({loading: false});
-
     OntodiaExtension.loadAndUpdate(this, this.cancellation);
     this.registerEventSources();
   }
@@ -765,7 +743,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
         options,
         repositories,
         createRDFStorage: provisionQuery !== undefined,
-        fields: _.values(this.allFields),
+        fields: this.allFields,
         settings: this.props.providerSettings,
         forceFields: this.forceFields,
       });
@@ -797,7 +775,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
     const model = this.workspace.getModel();
     const editor = this.workspace.getEditor();
 
-    const triggerEvent = _.debounce(() => {
+    const triggerEvent = debounce(() => {
       trigger({
         source: id,
         eventType: OntodiaEvents.DiagramChanged,
@@ -1058,7 +1036,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
 
     trigger({
       source: this.props.id,
-      eventType: OntodiaEvents.DataPersisted,
+      eventType: OntodiaEvents.DiagramChanged,
       data: {
         model: model,
         authoringState: editor.authoringState,

@@ -19,7 +19,7 @@
 import * as React from 'react';
 import { ReactElement, Children, ReactNode } from 'react';
 import * as Immutable from 'immutable';
-import { ElementTypeIri, Dictionary } from 'ontodia';
+import { ElementTypeIri } from 'ontodia';
 
 import { Component } from 'platform/api/components';
 import { xsd } from 'platform/api/rdf/vocabularies';
@@ -86,13 +86,12 @@ export interface EntityParent {
 }
 
 export function extractAuthoringMetadata(
-  allFields: Dictionary<FieldDefinition>,
   markup: ReadonlyArray<ReactElement<any>>
 ): Map<ElementTypeIri, EntityMetadata> {
   const metadata = new Map<ElementTypeIri, EntityMetadata>();
   for (const child of markup) {
     if (componentHasType(child, ResourceEditorForm)) {
-      collectMetadataFromFormOrComposite(child, undefined, metadata, allFields);
+      collectMetadataFromFormOrComposite(child, undefined, metadata);
     }
   }
   return metadata;
@@ -101,8 +100,7 @@ export function extractAuthoringMetadata(
 function collectMetadataFromFormOrComposite(
   formOrComposite: ReactElement<ResourceEditorFormProps | CompositeInputProps>,
   parent: EntityParent | undefined,
-  collectedMetadata: Map<ElementTypeIri, EntityMetadata>,
-  allFields: Dictionary<FieldDefinition>
+  collectedMetadata: Map<ElementTypeIri, EntityMetadata>
 ) {
   const {form, metadataElement} = extractEntityFormAndMetadata(formOrComposite);
   const {entityTypeIri, labelIri, typeIri, imageIri, forceIris} = metadataElement.props;
@@ -117,12 +115,9 @@ function collectMetadataFromFormOrComposite(
     throw new Error(`Missing 'typeIri' prop for ontodia-entity-metadata`);
   }
 
-  // TODO don't cast to any
-  const fields = form.props.fields.map(f => allFields[f as any]);
+  const fields = form.props.fields.map(normalizeFieldDefinition);
   const fieldByIri = Immutable.Map(
-    fields.map(f => {
-      return [f.iri, f] as [string, FieldDefinition];
-    })
+    fields.map(f => [f.iri, f] as [string, FieldDefinition])
   );
   const labelField = fieldByIri.get(labelIri);
   const typeField = fieldByIri.get(typeIri);
@@ -160,7 +155,7 @@ function collectMetadataFromFormOrComposite(
   validateFormFieldsDatatype(form.props.children, metadata);
 
   collectedMetadata.set(metadata.entityType, metadata);
-  collectMetadataFromMarkup(form.props.children, metadata.entityType, collectedMetadata, allFields);
+  collectMetadataFromMarkup(form.props.children, metadata.entityType, collectedMetadata);
 }
 
 function validateFormFieldsDatatype(children: ReactNode | undefined, metadata: EntityMetadata) {
@@ -182,8 +177,7 @@ function validateFormFieldsDatatype(children: ReactNode | undefined, metadata: E
 function collectMetadataFromMarkup(
   children: ReactNode | undefined,
   parentType: ElementTypeIri,
-  collectedMetadata: Map<ElementTypeIri, EntityMetadata>,
-  allFields: Dictionary<FieldDefinition>
+  collectedMetadata: Map<ElementTypeIri, EntityMetadata>
 ) {
   if (!children) { return; }
   React.Children.forEach(children, child => {
@@ -193,9 +187,9 @@ function collectMetadataFromMarkup(
           type: parentType,
           fieldIri: (child.props as CompositeInputProps).for,
         };
-        collectMetadataFromFormOrComposite(child, parent, collectedMetadata, allFields);
+        collectMetadataFromFormOrComposite(child, parent, collectedMetadata);
       } else {
-        collectMetadataFromMarkup(child.props.children, parentType, collectedMetadata, allFields);
+        collectMetadataFromMarkup(child.props.children, parentType, collectedMetadata);
       }
     }
   });

@@ -66,7 +66,6 @@ public class FieldDefinitionManager implements PlatformCache {
 
     private final RepositoryManager repositoryManager;
     private final LoadingCache<IRI, Optional<FieldDefinition>> cache;
-    private boolean all = false;
 
     @Inject
     public FieldDefinitionManager(RepositoryManager repositoryManager, CacheManager cacheManager) {
@@ -94,13 +93,11 @@ public class FieldDefinitionManager implements PlatformCache {
 
     @Override
     public void invalidate() {
-        this.all = false;
         this.cache.invalidateAll();
     }
 
     @Override
     public void invalidate(Set<IRI> iris) {
-        this.all = false;
         this.cache.invalidateAll(iris);
     }
 
@@ -114,16 +111,10 @@ public class FieldDefinitionManager implements PlatformCache {
         }
     }
 
-    public synchronized Map<IRI, FieldDefinition> queryAllFieldDefinitions() {
+    public Map<IRI, FieldDefinition> queryAllFieldDefinitions() {
         logger.trace("Querying all field definitions");
-        Map<IRI, Optional<FieldDefinition>> found;
-        if (!this.all) {
-          found = loadFieldDefinitions(null);
-          this.cache.putAll(found);
-        } else {
-            found = this.cache.asMap();
-        }
-        this.all = true;
+        Map<IRI, Optional<FieldDefinition>> found = loadFieldDefinitions(null);
+        this.cache.putAll(found);
         return flattenOptionMap(found);
     }
 
