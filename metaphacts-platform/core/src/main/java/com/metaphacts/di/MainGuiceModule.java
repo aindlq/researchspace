@@ -21,6 +21,7 @@ package com.metaphacts.di;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import javax.inject.Inject;
@@ -35,6 +36,7 @@ import org.apache.shiro.authc.credential.PasswordService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
@@ -123,7 +125,7 @@ public class MainGuiceModule extends AbstractModule {
     @Provides
     @Singleton
     @Named("ASSETS_MAP")
-    public Map<String, String> getAssetsMap() throws IOException {
+    public Map<String, List<String>> getAssetsMap() throws IOException {
         this.servletContext.getResourceAsStream("/assets/dll-manifest.json");
         ObjectMapper mapper = new ObjectMapper();
         JsonNode dllManifest = mapper.readTree(
@@ -133,20 +135,27 @@ public class MainGuiceModule extends AbstractModule {
             this.servletContext.getResourceAsStream("/assets/bundles-manifest.json")
         );
 
-        Map<String, String> map = Maps.newLinkedHashMap();
-        map.put("vendor", dllManifest.get("vendor").get("js").asText());
-        map.put("basic_styling", dllManifest.get("basic_styling").get("css").asText());
+        Map<String, List<String>> map = Maps.newLinkedHashMap();
+        map.put("vendor", Lists.newArrayList(dllManifest.get("vendor").get("js").asText()));
+        map.put("basic_styling", Lists.newArrayList(dllManifest.get("basic_styling").get("css").asText()));
 
         Iterator<Map.Entry<String, JsonNode>> iterator = appManifest.fields();
         while (iterator.hasNext()) {
             Map.Entry<String, JsonNode> entry = iterator.next();
             String bundleName = entry.getKey();
             JsonNode bundlePath = entry.getValue().get("js");
-            if (bundlePath == null || !bundlePath.isTextual()) {
+            if (bundlePath == null || !bundlePath.isArray()) {
                 throw new IllegalStateException(
                     "Invalid value for bundle name '" + bundleName + "' in bundles-manifest.json");
             }
-            map.put(bundleName, bundlePath.asText());
+            Iterator<JsonNode> itemsIterator = bundlePath.elements();
+            List<String> items = Lists.newArrayList();
+            while (itemsIterator.hasNext()) {
+              items.add(
+                itemsIterator.next().asText()
+              );
+            }
+            map.put(bundleName, items);
         }
 
         return Collections.unmodifiableMap(map);

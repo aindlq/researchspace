@@ -19,6 +19,7 @@
 const webpack = require('webpack');
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 const defaultsFn = require('./defaults');
+const AssetsPlugin = require('assets-webpack-plugin');
 
 /**
  * @param {{ [key: string]: string }} env
@@ -40,8 +41,7 @@ module.exports = function (env) {
     };
     config.output.chunkFilename = "[name]-[chunkhash]-bundle.js";
 
-  config.optimization = {
-    minimizer: [
+    config.optimization.minimizer = [
       new UglifyJsPlugin({
         parallel: true,
         sourceMap: false,
@@ -54,8 +54,7 @@ module.exports = function (env) {
           }
         }
       }),
-    ]
-  };
+    ];
 
   let tsLoader = config.module.rules[0].use[0];
 
@@ -75,6 +74,20 @@ module.exports = function (env) {
             'process.env': {
                 NODE_ENV: '"production"'
             }
+        })
+    );
+
+    config.plugins.push(
+        /*
+         * Generate json files with bundle - hashed bundle file names,
+         * so we can properly refer to bundles in main.hbs and login.hbs files
+         */
+        new AssetsPlugin({
+            entrypoints: true,
+            manifestFirst: true,
+            prettyPrint: true,
+            filename: 'bundles-manifest.json',
+            path: defaults.DIST
         })
     );
     return config;

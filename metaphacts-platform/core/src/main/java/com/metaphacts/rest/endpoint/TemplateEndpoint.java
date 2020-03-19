@@ -126,7 +126,7 @@ public class TemplateEndpoint extends ResourceConfig {
     private LabelCache labelCache;
 
     @Inject @Named("ASSETS_MAP")
-    private Map<String, String> assetsMap;
+    private Map<String, List<String>> assetsMap;
 
     @Context
     private UriInfo uriInfo;
@@ -225,7 +225,7 @@ public class TemplateEndpoint extends ResourceConfig {
     @Path("vendor")
     @NoCache
     public Response getVendorScript() {
-        URI uri = UriBuilder.fromPath(assetsMap.get("vendor")).build();
+        URI uri = UriBuilder.fromPath(assetsMap.get("vendor").get(0)).build();
         return Response.status(Status.FOUND).location(uri).build();
     }
 

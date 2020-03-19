@@ -34,7 +34,7 @@
   },
   "devDependencies": {
     "@types/jasmine": "^2.5.53",
-    "assets-webpack-plugin": "3.6.0",
+    "assets-webpack-plugin": "3.9.7",
     "autoprefixer": "6.7.7",
     "better-npm-run": "0.0.15",
     "bundle-loader": "0.5.6",

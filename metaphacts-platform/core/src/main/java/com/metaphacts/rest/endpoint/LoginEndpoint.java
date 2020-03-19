@@ -19,6 +19,7 @@
 package com.metaphacts.rest.endpoint;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import javax.inject.Inject;
@@ -45,7 +46,7 @@ public class LoginEndpoint {
     private ST st;
 
     @Inject @Named("ASSETS_MAP")
-    private Map<String, String> assetsMap;
+    private Map<String, List<String>> assetsMap;
 
     @GET()
     @Path("{path: .*}")

@@ -7,8 +7,14 @@
         <!-- the following header makes IE select latest document mode -->
         <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1" />
         {{{html-head}}}
-        <script defer type='text/javascript' src='{{assetsMap.vendor}}'></script>
-        <script defer type='text/javascript' src='{{assetsMap.app}}'></script>
+
+        {{#each assetsMap.vendor}}
+        <script defer type='text/javascript' src='{{this}}'></script>
+        {{/each}}
+
+        {{#each assetsMap.app}}
+        <script defer type='text/javascript' src='{{this}}'></script>
+        {{/each}}
     </head>
     <body>
       <div id="application"></div>

@@ -3,6 +3,9 @@
   <head>
     <meta charset='utf-8'>
     <title>{{deploymentTitle}}</title>
+    {{#each assetsMap.basic_styling}}
+        <link href="{{this}}" rel="stylesheet" type="text/css">
+    {{/each}}
     <link href="{{assetsMap.basic_styling}}" rel="stylesheet" title="Default Style">
     <style>
       body {
