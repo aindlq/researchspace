@@ -19,6 +19,8 @@
 const webpack = require('webpack');
 const WebpackNotifierPlugin = require('webpack-notifier');
 const ProgressBarPlugin = require('progress-bar-webpack-plugin');
+const AssetsPlugin = require('assets-webpack-plugin');
+const path = require('path');
 
 /**
  * @param {ReturnType<import('./defaults')>} defaults
@@ -49,7 +51,20 @@ module.exports = function(defaults) {
     }),
     // @ts-ignore
     new ProgressBarPlugin(),
-    new WebpackNotifierPlugin({title: 'Platform', excludeWarnings: true})
+      new WebpackNotifierPlugin({title: 'Platform', excludeWarnings: true}),
+
+      /*
+       * Generate json files with bundle - hashed bundle file names,
+       * so we can properly refer to bundles in main.hbs and login.hbs files
+       */
+      new AssetsPlugin({
+          entrypoints: true,
+          manifestFirst: true,
+          prettyPrint: true,
+          filename: 'bundles-manifest.json',
+          path: path.join(defaults.ROOT_DIR, 'target/webapp/assets'),
+      })
+
   );
 
   config.output.publicPath = 'http://localhost:3000/assets/';

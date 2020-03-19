@@ -128,6 +128,43 @@ module.exports = function (defaults) {
             chunkFilename: '[name]-bundle.js',
             publicPath: '/assets/'
         },
+        optimization: {
+            runtimeChunk: 'single',
+            providedExports: false,
+            usedExports: false,
+            concatenateModules: false,
+            splitChunks: {
+                chunks: 'all',
+                maxInitialRequests: Infinity,
+                maxAsyncRequests: Infinity,
+                minSize: 0,
+                minChunks: 1,
+                cacheGroups: {
+                    api: {
+                      test: /metaphacts-platform[\\/]web[\\/]src[\\/]main[\\/]api[\\/]/,
+                      name: 'api',
+                      enforce: true
+                    },
+                    vendor: {
+                        test: /[\\/]node_modules[\\/]/,
+                        enforce: true,
+                        name(module) {
+                            // get the name. E.g. node_modules/packageName/not/this/part.js
+                            // or node_modules/packageName
+                            const packageName = module.context.match(/[\\/]node_modules[\\/](.*?)([\\/]|$)/)[1];
+
+                            // npm package names are URL-safe, but some servers don't like @ symbols
+                            return `npm.${packageName.replace('@', '')}`;
+                        },
+                    },
+                    default: {
+                        minChunks: 1,
+                        priority: -20,
+                        reuseExistingChunk: true
+                    }
+                },
+            },
+        },
         module: {
             /** @type {any[]} */
             rules: [
@@ -491,15 +528,6 @@ module.exports = function (defaults) {
                 ]
             }),
 
-            /*
-             * Generate json files with bundle - hashed bundle file names,
-             * so we can properly refer to bundles in main.hbs and login.hbs files
-             */
-            new AssetsPlugin({
-              // TODO: use this generated file even in local dev builds
-              filename: 'bundles-manifest.json',
-              path: defaults.DIST
-            })
         ]
     };
 

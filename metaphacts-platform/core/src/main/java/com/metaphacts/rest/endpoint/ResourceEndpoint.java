@@ -55,6 +55,7 @@ import com.metaphacts.api.sparql.SparqlOperationBuilder;
 import com.metaphacts.api.sparql.SparqlUtil;
 import com.metaphacts.config.NamespaceRegistry;
 import com.metaphacts.data.rdf.ReadConnection;
+import com.metaphacts.di.MainGuiceModule.MainTemplateProvider;
 import com.metaphacts.repository.RepositoryManager;
 import com.metaphacts.rest.feature.CacheControl.NoCache;
 import com.metaphacts.ui.templates.MainTemplate;
@@ -72,7 +73,7 @@ public class ResourceEndpoint {
     private static Logger logger = LogManager.getLogger(ResourceEndpoint.class);
 
     @Inject
-    private MainTemplate mainTemplate;
+    private MainTemplateProvider mainTemplateProvider;
 
     @Inject
     private RepositoryManager repositoryManager;
@@ -91,7 +92,7 @@ public class ResourceEndpoint {
     @Produces(MediaType.TEXT_HTML)
     @NoCache
     public String getMainPage() throws IOException {
-        return mainTemplate.getMainTemplate();
+        return mainTemplateProvider.get();
     }
 
     /**

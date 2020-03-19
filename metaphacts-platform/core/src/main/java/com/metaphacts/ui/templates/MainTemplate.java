@@ -20,6 +20,7 @@ package com.metaphacts.ui.templates;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
 import java.util.jar.Manifest;
 
@@ -54,7 +55,7 @@ public class MainTemplate {
     private Configuration config;
 
     @Inject @Named("ASSETS_MAP")
-    private Map<String, String> assetsMap;
+    private Map<String, List<String>> assetsMap;
 
     public String getMainTemplate() throws IOException {
         MainTemplateOpts opts = new MainTemplateOpts(this.getVersion(), this.assetsMap, config);
@@ -74,9 +75,9 @@ public class MainTemplate {
         public String version;
         public String deploymentTitle;
 
-		public Map<String, String> assetsMap;
+		public Map<String, List<String>> assetsMap;
 
-        public MainTemplateOpts(String version, Map<String, String> assetsMap, Configuration config) {
+        public MainTemplateOpts(String version, Map<String, List<String>> assetsMap, Configuration config) {
             this.version = version;
             this.assetsMap = assetsMap;
             this.deploymentTitle = config.getUiConfig().getDeploymentTitle();
@@ -111,7 +112,7 @@ public class MainTemplate {
          *         server.
          */
         @SuppressWarnings("unused")
-        public Map<String, String> getAssetsMap() {
+        public Map<String, List<String>> getAssetsMap() {
             return assetsMap;
         }
     }

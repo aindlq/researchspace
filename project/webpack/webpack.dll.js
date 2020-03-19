@@ -42,6 +42,18 @@ module.exports = function(defaults) {
                 'core.lambda', 'data.either', 'uuid', 'es6-promise', 'tslib',
                 '@webcomponents/custom-elements',
                 '@webcomponents/webcomponentsjs/custom-elements-es5-adapter.js',
+                'codemirror',
+                'codemirror/mode/htmlmixed/htmlmixed',
+                'codemirror/addon/mode/simple',
+                'codemirror/addon/runmode/runmode',
+                'codemirror/addon/mode/multiplex',
+                'codemirror/mode/handlebars/handlebars',
+                'codemirror/mode/xml/xml',
+                'codemirror/mode/javascript/javascript',
+                'codemirror/mode/clike/clike',
+                'codemirror/mode/sparql/sparql',
+                'codemirror/mode/turtle/turtle',
+                'codemirror/mode/shell/shell'
             ]
         },
         module: {

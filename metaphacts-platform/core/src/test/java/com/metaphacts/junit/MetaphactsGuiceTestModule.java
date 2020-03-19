@@ -23,12 +23,13 @@ import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.SecureRandom;
-import java.util.Map;
+import java.util.List;
 
 import javax.inject.Named;
 
 import org.apache.commons.io.FileUtils;
 
+import com.github.jsonldjava.shaded.com.google.common.collect.Lists;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -114,12 +115,12 @@ public class MetaphactsGuiceTestModule extends AbstractModule {
     @Provides
     @Singleton
     @Named("ASSETS_MAP")
-    public Map<String, String> getAssetsMap() {
+    public ImmutableMap<String, List<String>> getAssetsMap() {
         return ImmutableMap.of(
-    	    "vendor", "vendor.js",
-            "basic_styling", "basic_styling.css",
-            "app", "app.js",
-            "hot", "hot.js"
+    	    "vendor", Lists.newArrayList("vendor.js"),
+            "basic_styling", Lists.newArrayList("basic_styling.css"),
+            "app", Lists.newArrayList("app.js"),
+            "hot", Lists.newArrayList("hot.js")
         );
     }
 
