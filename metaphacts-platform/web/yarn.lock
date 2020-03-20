@@ -2350,9 +2350,9 @@ once@^1.3.0:
   dependencies:
     wrappy "1"
 
-"ontodia@https://github.com/aindlq/ontodia#c6dbb2fc649f73da838e8fced56a4231a167e39c":
+"ontodia@https://github.com/aindlq/ontodia#2d9a9b09322ae1073423768963e20291d4ced3db":
   version "0.12.0"
-  resolved "https://github.com/aindlq/ontodia#c6dbb2fc649f73da838e8fced56a4231a167e39c"
+  resolved "https://github.com/aindlq/ontodia#2d9a9b09322ae1073423768963e20291d4ced3db"
   dependencies:
     d3-color "~1.0.2"
     file-saverjs "~1.3.6"
