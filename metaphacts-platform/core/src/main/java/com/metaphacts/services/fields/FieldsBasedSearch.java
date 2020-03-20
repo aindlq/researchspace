@@ -32,22 +32,16 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
-import org.eclipse.rdf4j.model.ValueFactory;
-import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryLanguage;
 import org.eclipse.rdf4j.query.algebra.*;
 import org.eclipse.rdf4j.query.parser.QueryParserUtil;
 import org.eclipse.rdf4j.rio.ntriples.NTriplesUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.type.TypeReference;
 
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.io.IOException;
 
 public class FieldsBasedSearch {
     private static final Logger logger = LogManager.getLogger(FieldsBasedSearch.class);
@@ -167,7 +161,7 @@ public class FieldsBasedSearch {
         String queryPattern;
         String rangePattern = null;
         try {
-            queryPattern = transformFieldInsertQueryToRelationPattern(kind, field.getInsertPattern());
+            queryPattern = transformFieldSelectQueryToRelationPattern(kind, field.getSelectPattern());
             if (field.getSelectPattern() != null) {
                 rangePattern = transformFieldSelectQueryToCategoryPattern(field.getSelectPattern());
             }
@@ -200,17 +194,11 @@ public class FieldsBasedSearch {
         return relation;
     }
 
-    private String transformFieldInsertQueryToRelationPattern(RelationKind kind, String insertQuery) {
-        String query = namespaceRegistry.prependSparqlPrefixes(insertQuery);
-
-        List<UpdateExpr> updates = QueryParserUtil.parseUpdate(QueryLanguage.SPARQL, query, null)
-            .getUpdateExprs();
-        if (!(updates.size() == 1 && updates.get(0) instanceof Modify)) {
-            throw new RuntimeException("Insert query should contain only single modify operation");
-        }
-
-        TupleExpr insert = ((Modify)updates.get(0)).getInsertExpr();
-        TupleExpr mapped = mapRelationPattern(kind, insert.clone());
+    private String transformFieldSelectQueryToRelationPattern(RelationKind kind, String selectQuery) {
+        String query = namespaceRegistry.prependSparqlPrefixes(selectQuery);
+        UnaryTupleOperator select = ((UnaryTupleOperator) QueryParserUtil.parseTupleQuery(QueryLanguage.SPARQL, query, null).getTupleExpr());
+        TupleExpr where = select.getArg();
+        TupleExpr mapped = mapRelationPattern(kind, where.clone());
         return renderTupleExpression(mapped);
     }
 
