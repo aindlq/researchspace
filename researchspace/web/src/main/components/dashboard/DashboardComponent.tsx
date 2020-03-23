@@ -417,6 +417,28 @@ export class DashboardComponent extends Component<Props, State> {
 
   render() {
     const {items} = this.state;
+    const children = React.Children.toArray(this.props.children);
+
+    const frames =
+      items.map(item => ({
+        id: item.id,
+        type: WorkspaceLayoutType.Component,
+        className: 'thinking-frames__frames',
+        content: this.renderView(item) as React.ReactElement<any>,
+        heading: this.renderLabel(item),
+        minSize: this.props.frameMinSize,
+      })) as any;
+    if (children.length > 1) {
+      frames.unshift({
+        id: 'heading',
+        type: WorkspaceLayoutType.Component,
+        className: 'thinking-frames__frames',
+        content: React.Children.only(children[1]) as any,
+        heading: null,
+        minSize: 60,
+        defaultSize: 60
+      } as any);
+    }
     const layout: WorkspaceLayoutNode = {
       type: WorkspaceLayoutType.Row,
       children: [{
@@ -425,7 +447,7 @@ export class DashboardComponent extends Component<Props, State> {
           id: 'thought-board',
           type: WorkspaceLayoutType.Component,
           className: 'thinking-frames__clipboard-sidebar',
-          content: React.Children.only(this.props.children) as React.ReactElement<any>,
+          content: React.Children.only(children[0]) as any,
           heading: 'Clipboard',
         }, {
           id: 'items',
@@ -450,14 +472,7 @@ export class DashboardComponent extends Component<Props, State> {
         defaultSize: 300,
       }, {
         type: WorkspaceLayoutType.Column,
-        children: items.map(item => ({
-          id: item.id,
-          type: WorkspaceLayoutType.Component,
-          className: 'thinking-frames__frames',
-          content: this.renderView(item) as React.ReactElement<any>,
-          heading: this.renderLabel(item),
-          minSize: this.props.frameMinSize,
-        })),
+        children: frames,
         undocked: true,
       }],
     };
