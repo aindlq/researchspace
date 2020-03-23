@@ -30,6 +30,8 @@ import { TriplestorePersistence } from './TriplestorePersistence';
 export interface SparqlPersistenceConfig {
   type?: 'sparql';
   repository?: string;
+  targetGraphIri?: string;
+  targetInsertGraphIri?: string;
 }
 
 export class SparqlPersistence implements TriplestorePersistence {
@@ -37,14 +39,17 @@ export class SparqlPersistence implements TriplestorePersistence {
 
   persist(
     initialModel: CompositeValue | EmptyValue,
-    currentModel: CompositeValue | EmptyValue,
+    currentModel: CompositeValue | EmptyValue
   ): Kefir.Property<void> {
-    const updateQueries = RawSparqlPersistence.createFormUpdateQueries(initialModel, currentModel);
+    const {repository = 'default', targetGraphIri, targetInsertGraphIri} = this.config;
+    const updateQueries =
+      RawSparqlPersistence.createFormUpdateQueries(
+        initialModel, currentModel, targetGraphIri, targetInsertGraphIri
+      );
     const stringQueries = Immutable.List<SparqlJs.ConstructQuery>(updateQueries).map(
       SparqlUtil.serializeQuery
     ).flatten();
 
-    const {repository = 'default'} = this.config;
     const req = request
       .post('/form-persistence/sparql')
       .type('application/json')

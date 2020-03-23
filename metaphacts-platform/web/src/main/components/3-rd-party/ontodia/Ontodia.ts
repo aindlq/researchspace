@@ -113,7 +113,7 @@ import {
   OntodiaFieldConfiguration, OntodiaFieldConfigurationProps, extractFieldConfiguration,
 } from './authoring/OntodiaFieldConfiguration';
 import {
-  OntodiaPersistenceResult, OntologyPersistenceProps
+  OntodiaPersistenceResult
 } from './authoring/OntodiaPersistence';
 import {
   getEntityMetadata, convertCompositeValueToElementModel, convertElementModelToCompositeValue
@@ -355,7 +355,8 @@ export interface OntodiaConfig {
   additionalTreeItemTemplate?: string;
 }
 
-export type OntodiaPersistenceMode = FormBasedPersistenceProps | OntologyPersistenceProps;
+export type OntodiaPersistenceMode =
+  FormBasedPersistenceProps;
 
 export interface OntodiaProps extends OntodiaConfig, ClassAttributes<Ontodia> {
   onLoadWorkspace?: (workspace: Workspace) => void;
@@ -376,12 +377,7 @@ const DEFAULT_FACTORY: OntodiaFactory = {
     return workspace.zoomToFit();
   },
   getPersistence: mode => {
-    switch (mode.type) {
-      case 'form':
-        return new FormBasedPersistence(mode);
-      default:
-        throw new Error(`Ontodia graph persistence mode is not supported: "${mode.type}"`);
-    }
+    return new FormBasedPersistence(mode);
   }
 };
 
@@ -729,6 +725,7 @@ export class Ontodia extends Component<OntodiaProps, State> {
         queryMethod: SparqlQueryMethod.POST,
         acceptBlankNodes: acceptBlankNodes,
       };
+
       const repositories = this.getRepositories();
       this.dataProvider = createDataProvider({
         configName,
