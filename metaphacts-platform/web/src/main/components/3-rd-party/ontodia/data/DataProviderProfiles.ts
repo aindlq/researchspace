@@ -173,9 +173,11 @@ BIND(0 as ?score)
 }`,
 
   elementInfoQuery:
-`CONSTRUCT {
-  ?inst rdf:type ?class .
-  ?inst rdfs:label ?label .
+`
+PREFIX ontodia: <https://ontodia.org/context/v1.json/>
+CONSTRUCT {
+  ?inst ontodia:type ?class .
+  ?inst ontodia:label ?label .
   ?inst ?propType ?propValue.
 } WHERE {
   VALUES (?inst) {\${ids}}
