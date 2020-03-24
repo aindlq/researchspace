@@ -124,6 +124,7 @@ import { deriveCancellationToken } from './AsyncAdapters';
 import * as OntodiaEvents from './OntodiaEvents';
 import { SparqlClient, SparqlUtil } from 'platform/api/sparql';
 import { Sparql } from 'platform/api/sparql/SparqlUtil';
+import { Resizable } from 'researchspace/components/resizable/Resizable';
 
 export interface EdgeStyle {
   markerSource?: LinkMarkerStyle,
@@ -1309,22 +1310,47 @@ export class Ontodia extends Component<OntodiaProps, State> {
 
   private getElementTemplate = (template: string): ElementTemplate => {
     const inAuthoringMode = () => this.state.fieldConfiguration.authoringMode;
-    return class extends ReactComponent<TemplateProps, {}> {
+    const getWorkspace = this.getWorkspace;
+    return class extends ReactComponent<TemplateProps> {
       render() {
         if (inAuthoringMode()) {
           return createElement(AuthoredEntity, {
             templateProps: this.props,
             children: (context: AuthoredEntityContext) => {
-              return createElement(TemplateItem, {
-                template: {source: template, options: this.props},
-                componentMapper: component => mapTemplateComponent(component, context),
-              });
+              return createElement(
+                Resizable, {
+                  onResize: size => {
+                    this.props.setFixedSize(true);
+                    this.props.setSize(size);
+                  },
+                  setFixedSize: this.props.setFixedSize,
+                  size: this.props.size,
+                  isFixedSize: this.props.isFixedSize,
+                  getScale: () => getWorkspace()._getPaperArea().getScale(),
+                },
+                createElement(TemplateItem, {
+                  template: {source: template, options: this.props},
+                  componentMapper: component => mapTemplateComponent(component, context),
+                })
+              );
             }
           });
         } else {
-          return createElement(TemplateItem, {
-            template: {source: template, options: this.props},
-          });
+          return  createElement(
+            Resizable, {
+              onResize: size => {
+                this.props.setFixedSize(true);
+                this.props.setSize(size);
+              },
+              setFixedSize: this.props.setFixedSize,
+              size: this.props.size,
+              isFixedSize: this.props.isFixedSize,
+              getScale: () => getWorkspace()._getPaperArea().getScale(),
+            },
+            createElement(TemplateItem, {
+              template: {source: template, options: this.props},
+            })
+          );
         }
       }
     };

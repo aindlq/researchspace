@@ -16,7 +16,7 @@
  * of the GNU Lesser General Public License from http://www.gnu.org/
  */
 
-import { createElement, ReactElement, cloneElement } from 'react';
+import { createElement, ReactElement, cloneElement, Props } from 'react';
 import * as D from 'react-dom-factories';
 import { isEqual, isArray } from 'lodash';
 import * as classNames from 'classnames';
@@ -29,7 +29,7 @@ import { ModuleRegistry } from 'platform/api/module-loader';
 import { ErrorNotification } from 'platform/components/ui/notification';
 
 
-export interface TemplateItemProps {
+export interface TemplateItemProps extends Props<TemplateItem> {
   template: Template;
   componentProps?: {
     [key: string]: any;
@@ -107,14 +107,18 @@ export class TemplateItem extends Component<TemplateItemProps, State> {
     } else if (isArray(root)) {
       return root;
     } else if (root) {
+      // propagate also props.children, we need this for react-resizable
+      // to be able to add resize handle to templated items
+      const children =
+        this.props.children ? [root.props.children, this.props.children] : root.props.children;
       component = cloneElement(root, {
-        ...this.props.componentProps,
         ...root.props,
+        ...this.props.componentProps,
         className: classNames(
           Maybe.fromNullable(this.props.componentProps).map(cp => cp.className).getOrElse(''),
           root.props.className
         ),
-        children: root.props.children,
+        children,
       });
     } else {
       component = null;

@@ -17,7 +17,8 @@
     "src/main/components/text-annotation",
     "src/main/components/timeline",
     "src/main/components/dashboard",
-    "src/main/components/text-editor"
+    "src/main/components/text-editor",
+    "src/main/components/resizable"
   ],
   "generatedJsonSchemas": [
     "TextAnnotationTemplateBindings",
