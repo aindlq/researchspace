@@ -812,16 +812,16 @@ export class Ontodia extends Component<OntodiaProps, State> {
         eventType: OntodiaEvents.CreateElement,
         target: id,
       })
-    ).flatMap(event =>
-      Kefir.fromPromise(
-        editor.metadataApi.generateNewElementIri(
-          (event.data.elementData as ElementModel).types,
-          undefined
-        )
-      ).map(iri => {
-        return {...event.data, elementModel: {...event.data.elementData, id: iri}};
-      })
-    ).observe({
+    ).map((event): typeof event.data & { elementModel: ElementModel } => {
+      const elementData = event.data.elementData as ElementModel;
+      return {
+        ...event.data,
+        elementModel: {
+          ...elementData,
+          id: this.metadataApi.generateIriForModel(elementData),
+        }
+      };
+    }).observe({
       value: ({elementModel, targets}) => {
         const element = editor.createNewEntity({elementModel: elementModel as ElementModel});
         targets.forEach(({targetIri, linkTypeId}) => {
@@ -1232,7 +1232,6 @@ export class Ontodia extends Component<OntodiaProps, State> {
         fields: metadata.fieldByIri.toArray(),
         newSubjectTemplate: metadata.newSubjectTemplate,
         model,
-        suggestIri: isNewElement ? true : undefined,
         onSubmit: newData => {
           const editedModel = convertCompositeValueToElementModel(newData, metadata);
           options.onSubmit(editedModel);

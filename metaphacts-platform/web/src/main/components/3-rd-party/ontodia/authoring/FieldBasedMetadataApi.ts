@@ -20,12 +20,13 @@ import * as Kefir from 'kefir';
 import * as SparqlJs from 'sparqljs';
 import {
   CancellationToken, ElementModel, ElementTypeIri, LinkTypeIri, MetadataApi, PropertyTypeIri,
-  LinkModel, ElementIri, LinkDirection,
+  LinkModel, ElementIri, LinkDirection, PLACEHOLDER_ELEMENT_TYPE,
 } from 'ontodia';
 import * as Immutable from 'immutable';
 
 import { Rdf } from 'platform/api/rdf';
 import { SparqlClient, SparqlUtil } from 'platform/api/sparql';
+import { getLabel } from 'platform/api/services/resource-label';
 
 import {
   generateSubjectByTemplate, CompositeValue, FieldError, FieldValue,
@@ -33,7 +34,7 @@ import {
 
 import { observableToCancellablePromise } from '../AsyncAdapters';
 import { EntityMetadata, isObjectProperty } from './FieldConfigurationCommon';
-import { getEntityMetadata } from './OntodiaPersistenceCommon';
+import { getEntityMetadata, convertElementModelToCompositeValue } from './OntodiaPersistenceCommon';
 
 export class FieldBasedMetadataApi implements MetadataApi {
 
@@ -41,41 +42,55 @@ export class FieldBasedMetadataApi implements MetadataApi {
     private entityMetadata: Map<ElementTypeIri, EntityMetadata>
   ) {}
 
-  generateNewElementIri(types: ElementTypeIri[]): Promise<ElementIri> {
-    let subjectTemplate: string = undefined;
-    let metadata: EntityMetadata;
-    let typeIri;
+  async generateNewElement(
+    types: ReadonlyArray<ElementTypeIri>,
+    ct: CancellationToken
+  ): Promise<ElementModel> {
+    let typeIri: ElementTypeIri | undefined;
     if (types && types.length !== 0) {
       typeIri = types[0];
-      metadata = this.entityMetadata.get(typeIri);
-      if (metadata) {
-        subjectTemplate = metadata.newSubjectTemplate;
+    }
+
+    let typeLabel: string;
+    if (typeIri && typeIri !== PLACEHOLDER_ELEMENT_TYPE) {
+      typeLabel = await observableToCancellablePromise(getLabel(Rdf.iri(typeIri)), ct);
+    } else {
+      typeLabel = 'Entity';
+    }
+
+    const newModel: ElementModel = {
+      id: '' as ElementIri,
+      types: [...types],
+      label: {values: [{value: `New ${typeLabel}`, language: ''}]},
+      properties: {},
+    };
+    return {
+      ...newModel,
+      id: this.generateIriForModel(newModel),
+    };
+  }
+
+  generateIriForModel(model: ElementModel): ElementIri {
+    let metadata: EntityMetadata | undefined;
+    if (model.types.length > 0) {
+      const firstType = model.types[0];
+      if (firstType !== PLACEHOLDER_ELEMENT_TYPE) {
+        metadata = this.entityMetadata.get(firstType);
       }
     }
-
-    let newIri: ElementIri;
-    const uuid = () => Math.floor((1 + Math.random()) * 0x100000000).toString(16).substring(1);
-    if (subjectTemplate) {
-      const composite: CompositeValue = {
-        type: CompositeValue.type,
-        subject: Rdf.iri(''),
-        definitions: metadata.fieldByIri,
-        fields: Immutable.Map({
-          [metadata.typeField.id]: {
-            values: Immutable.List([FieldValue.fromLabeled({value: Rdf.iri(typeIri)})]),
-            errors: FieldError.noErrors
-          }
-        }),
-        errors: FieldError.noErrors,
-      };
-      const filledTemplate = generateSubjectByTemplate(subjectTemplate, undefined, composite).value;
-      const postfix = subjectTemplate.toLocaleLowerCase().indexOf('{{uuid}}') === -1 ? uuid() : '';
-      newIri = `${filledTemplate}${postfix}` as ElementIri;
+    if (metadata) {
+      const base = Rdf.iri(SparqlUtil.RegisteredPrefixes['Default']);
+      const newComposite = convertElementModelToCompositeValue(
+        {...model, id: '' as ElementIri}, metadata
+      );
+      const generatedIri = generateSubjectByTemplate(
+        metadata.newSubjectTemplate, base, newComposite
+      );
+      return generatedIri.value as ElementIri;
     } else {
-      newIri = `http://researchspace.org/NewEntity-${uuid()}` as ElementIri;
+      const uuid = () => Math.floor((1 + Math.random()) * 0x100000000).toString(16).substring(1);
+      return `NewEntity-${uuid()}` as ElementIri;
     }
-
-    return Promise.resolve(newIri);
   }
 
   canDropOnCanvas(source: ElementModel, ct: CancellationToken): Promise<boolean> {

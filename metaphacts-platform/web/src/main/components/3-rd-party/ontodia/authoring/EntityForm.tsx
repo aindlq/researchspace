@@ -22,8 +22,8 @@ import { Children, ReactNode, cloneElement } from 'react';
 import { Component } from 'platform/api/components';
 
 import {
-  ResourceEditorFormProps, CompositeValue, FieldDefinition,
-  SemanticForm, computeValuePatch, FieldValue, generateSubjectByTemplate,
+  CompositeValue, FieldDefinition, SemanticForm, generateSubjectByTemplate,
+  wasIriGeneratedByTemplate,
 } from 'platform/components/forms';
 import { isValidChild, universalChildren } from 'platform/components/utils';
 
@@ -34,7 +34,6 @@ import { SparqlUtil } from 'platform/api/sparql';
 
 export interface EntityFormProps {
   newSubjectTemplate?: string;
-  suggestIri?: boolean;
   acceptIriAuthoring?: boolean;
   fields: ReadonlyArray<FieldDefinition>;
   model: CompositeValue;
@@ -52,11 +51,12 @@ export class EntityForm extends Component<EntityFormProps, State> {
   private formRef: SemanticForm;
   constructor(props: EntityFormProps, context) {
     super(props, context);
-    const suggestIri = this.props.suggestIri === undefined ?
-      this.modelEqualToSuggested(this.props.model) : this.props.suggestIri;
-    this.initModel = suggestIri ?
-      this.modifyModelsIriBySuggestion(this.props.model) : this.props.model;
-    this.state = {model: this.initModel, suggestIri: suggestIri};
+    const isIriGeneratedByTemplate = this.modelEqualToSuggested(this.props.model);
+    this.initModel = this.props.model;
+    this.state = {
+      model: this.initModel,
+      suggestIri: Boolean(this.props.acceptIriAuthoring) && isIriGeneratedByTemplate,
+    };
   }
 
   componentWillReceiveProps(nextProps: EntityFormProps) {
@@ -88,33 +88,35 @@ export class EntityForm extends Component<EntityFormProps, State> {
   }
 
   private onModelUpdate(newModel: CompositeValue) {
-    const modelToSet =
-      this.state.suggestIri ? this.modifyModelsIriBySuggestion(newModel) : newModel;
+    const modelToSet = this.props.acceptIriAuthoring && this.state.suggestIri
+      ? this.modifyModelsIriBySuggestion(newModel) : newModel;
     this.setState({model: modelToSet});
   }
 
   private modifyModelsIriBySuggestion(model: CompositeValue): CompositeValue {
-    if (this.props.acceptIriAuthoring) {
-      const base = Rdf.iri(SparqlUtil.RegisteredPrefixes['Default']);
-      return {
-        ...model,
-        subject: generateSubjectByTemplate(
-          this.props.newSubjectTemplate,
-          base,
-          { ...model, subject: new Rdf.Iri('')}
-        ),
-      };
-    } else {
+    if (this.modelEqualToSuggested(model)) {
       return model;
     }
+
+    const base = Rdf.iri(SparqlUtil.RegisteredPrefixes['Default']);
+    return {
+      ...model,
+      subject: generateSubjectByTemplate(
+        this.props.newSubjectTemplate,
+        base,
+        {...model, subject: new Rdf.Iri('')}
+      ),
+    };
   }
 
   private modelEqualToSuggested(model: CompositeValue): boolean {
-    return generateSubjectByTemplate(
+    const base = Rdf.iri(SparqlUtil.RegisteredPrefixes['Default']);
+    return wasIriGeneratedByTemplate(
+      model.subject.value,
       this.props.newSubjectTemplate,
-      undefined,
-      { ...model, subject: new Rdf.Iri('')}
-    ).value === model.subject.value;
+      base,
+      {...model, subject: new Rdf.Iri('')}
+    );
   }
 
   private onSubmit = () => {
