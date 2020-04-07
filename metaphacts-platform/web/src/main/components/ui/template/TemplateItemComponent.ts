@@ -27,9 +27,20 @@ import { ModuleRegistry } from 'platform/api/module-loader';
  */
 export class TemplateItemComponent extends HTMLElement {
   connectedCallback() {
+    // this is ugly hack to workaround issue with react root inside custom web component,
+    // see https://github.com/facebook/react/issues/9242
+    const shadow = this.attachShadow({ mode: 'open' }) as any;
+    const root = document.createElement('div');
+    shadow.appendChild(root);
+
+    Object.defineProperty(root, 'ownerDocument', { value: shadow });
+    shadow.createElement = (...args: any) => (document as any).createElement(...args);
+    shadow.createElementNS = (...args: any) => (document as any).createElementNS(...args);
+    shadow.createTextNode = (...args: any) => (document as any).createTextNode(...args);
+
     ModuleRegistry.parseHtmlToReact(this.innerHTML).then(
       res => {
-        render(createElement('div', {}, res), this);
+        render(createElement('div', {}, res), root);
       }
     );
   }
