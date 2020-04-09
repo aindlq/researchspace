@@ -130,11 +130,12 @@ export function convertCompositeValueToElementModel(
         .map(v => v.value)
         .first();
     } else if (definition.iri === metadata.labelField.iri) {
-      labels = field.values.map(v => {
+      field.values.forEach(v => {
         if (FieldValue.isAtomic(v) && v.value.isLiteral()) {
-          return FieldValue.asRdfNode(v) as Rdf.Literal;
+          const label = FieldValue.asRdfNode(v) as Rdf.Literal;
+          labels = labels ? [...labels, label] : [label];
         }
-      }).toArray();
+      });
     } else {
       field.values.forEach(v => {
         if (!FieldValue.isAtomic(v)) { return; }
