@@ -112,6 +112,10 @@ public class TemplateContext {
         }
         return "";
     }
+    
+    public String getIri() {
+    	return "<" + this.value.stringValue() + ">";
+    }
 
     /**
      * Overrides toString() for template mechanism to access render [[this]] as
