@@ -56,6 +56,11 @@ interface TextEditorProps {
   documentIri?: string;
 
   /**
+   * @default false
+   */
+  readonly?: boolean;
+
+  /**
    * ID of the <semantic-link iri='http://help.metaphacts.com/resource/Storage'>
    * storage</semantic-link> to load text document content.
    */
@@ -232,6 +237,8 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
   emptyBlock = (props: RenderNodeProps) => {
     return (
       <div {...props.attributes}>
+      {
+        this.props.readonly ? props.children :
         <DropArea
           shouldReactToDrag={iri => iri.value !== this.props.documentIri}
           dropMessage='Drop here to add item to the narrative.'
@@ -239,6 +246,7 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
         >
           {props.children}
         </DropArea>
+      }
       </div>
     );
   }
@@ -363,6 +371,7 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
     } else {
       return (
         <div className={styles.narrativeHolder}>
+          {this.props.readonly ? null :
           <Toolbar
                   saving={this.state.saving}
                   value={this.state.value}
@@ -371,6 +380,7 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
                   options={this.state.availableTemplates}
                   onDocumentSave={this.onDocumentSave}
           />
+          }
             <div className={styles.sidebarAndEditorHolder}>
               <div className={styles.titleHolder}>
                 {this.state.documentIri ? (
@@ -380,7 +390,7 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
               ) : null}
               <FormGroup bsClass={`form-group ${styles.titleInput}`}>
                 <FormControl
-                  value={this.state.title} type='text'
+                  value={this.state.title} type='text' readOnly={this.props.readonly}
                   onChange={event => this.setState({title: (event.target as any).value})}
                   placeholder='Please enter document title'
                 />
@@ -389,6 +399,7 @@ export class TextEditor extends Component<TextEditorProps, TextEditorState> {
               <div className={styles.editorContainer}>
                 <Editor
                   ref={this.editorRef}
+                  readOnly={this.props.readonly}
                   spellCheck={false}
                   value={this.state.value}
                   renderMark={this.renderMark}
